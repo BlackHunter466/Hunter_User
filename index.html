@@ -64,44 +64,15 @@
     background: #0ff;
     box-shadow: 0 0 10px #0ff;
   }
-  .success {
-    margin-top: 1rem;
-    color: #00ff99;
-    font-weight: bold;
-  }
-  .error {
-    margin-top: 1rem;
-    color: red;
-    font-weight: bold;
-  }
-  .security-warning {
-    margin-top: 2rem;
-    text-align: left;
-    font-size: 0.9rem;
-    border-top: 1px dashed #00ff99;
-    padding-top: 1rem;
-    color: #ff4444;
-  }
-  /* Zugriff gewährt Animation */
+  .success { color: #00ff99; font-weight: bold; }
+  .error { color: red; font-weight: bold; }
   #accessGranted {
     display: none;
     font-size: 2rem;
     color: #00ff99;
     animation: blink 0.8s infinite alternate;
   }
-  @keyframes blink {
-    0% { opacity: 1; }
-    100% { opacity: 0.4; }
-  }
-  /* Warteschlangen-Seite */
-  #waitingPage p {
-    animation: pulse 1.5s infinite;
-  }
-  @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.4; }
-    100% { opacity: 1; }
-  }
+  @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0.4; } }
 </style>
 </head>
 <body>
@@ -112,41 +83,30 @@
   <form id="playerForm">
     <label for="nickname">Deckname</label>
     <input type="text" id="nickname" name="Nickname" required placeholder="Codename eingeben">
-
     <label for="haender">Händigkeit</label>
     <select id="haender" name="haender" required>
       <option value="links">Links</option>
       <option value="rechts">Rechts</option>
     </select>
-
     <label for="gender">Geschlecht</label>
     <select id="gender" name="Gender" required>
       <option value="m">Männlich</option>
       <option value="w">Weiblich</option>
       <option value="d">Divers</option>
     </select>
-
     <button type="submit">Profil sichern</button>
   </form>
   <div id="message"></div>
 </div>
 
-<!-- Zugriff gewährt Animation -->
+<!-- Zugriff gewährt -->
 <div id="accessGranted">ZUGRIFF GEWÄHRT...</div>
 
 <!-- Bestätigungsseite -->
 <div id="confirmationPage" class="card" style="display:none;">
   <h1>Agentenprofil gespeichert</h1>
   <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
-  <div class="security-warning">
-    <h3>Sicherheitsrichtlinien:</h3>
-    <ul>
-      <li>Diese Datenbank ist streng geheim.</li>
-      <li>Zugriff nur für autorisierte Agenten.</li>
-      <li>Alle Aktionen werden protokolliert.</li>
-    </ul>
-  </div>
-  <label style="margin-top:1rem;">
+  <label>
     <input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen
   </label>
   <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
@@ -155,80 +115,76 @@
 <!-- Warteschlangen-Seite -->
 <div id="waitingPage" class="card" style="display:none;">
   <h1>Einsatzwarteschlange</h1>
-  <p>Bitte warten, bis Sie aufgerufen werden...</p>
-  <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
+  <p>Bitte warten...</p>
+  <p>Aktuelle Position: <span id="queuePos">-</span></p>
 </div>
 
-<!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+<!-- Supabase SDK laden -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-  const supabaseKey ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+document.addEventListener("DOMContentLoaded", () => {
 
-  const formPage = document.getElementById('formPage');
-  const accessGranted = document.getElementById('accessGranted');
-  const confirmationPage = document.getElementById('confirmationPage');
-  const waitingPage = document.getElementById('waitingPage');
-  const messageDiv = document.getElementById('message');
-  const proceedBtn = document.getElementById('proceedBtn');
-  const securityConfirm = document.getElementById('securityConfirm');
+  // Supabase Client sauber initialisieren
+  const supabaseUrl = "https://ydqlidnpqxuwxhlpnfon.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c";
+  const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-  document.getElementById('playerForm').addEventListener('submit', async (e) => {
+  const formPage = document.getElementById("formPage");
+  const accessGranted = document.getElementById("accessGranted");
+  const confirmationPage = document.getElementById("confirmationPage");
+  const waitingPage = document.getElementById("waitingPage");
+  const messageDiv = document.getElementById("message");
+  const proceedBtn = document.getElementById("proceedBtn");
+  const securityConfirm = document.getElementById("securityConfirm");
+
+  document.getElementById("playerForm").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const nickname = document.getElementById('nickname').value.trim();
-    const haender = document.getElementById('haender').value;
-    const gender = document.getElementById('gender').value;
+    const nickname = document.getElementById("nickname").value.trim();
+    const haender = document.getElementById("haender").value;
+    const gender = document.getElementById("gender").value;
 
     if (!nickname) {
-      messageDiv.textContent = '⚠ Bitte Decknamen eingeben.';
-      messageDiv.className = 'error';
+      messageDiv.textContent = "⚠ Bitte Decknamen eingeben.";
+      messageDiv.className = "error";
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from('players')
-        .insert([{ Nickname: nickname, haender: haender, Gender: gender, is_ready: false }])
-        .select('id')
+      const { data, error } = await supabaseClient
+        .from("players")
+        .insert([{ Nickname: nickname, haender, Gender: gender, is_ready: false }])
+        .select("id")
         .single();
 
-      if (error) {
-        messageDiv.textContent = 'Fehler: ' + error.message;
-        messageDiv.className = 'error';
-      } else {
-        localStorage.setItem('player_id', data.id);
+      if (error) throw error;
 
-        // Zugriff gewährt Animation zeigen
-        formPage.style.display = 'none';
-        accessGranted.style.display = 'block';
+      localStorage.setItem("player_id", data.id);
+      formPage.style.display = "none";
+      accessGranted.style.display = "block";
 
-        setTimeout(() => {
-          accessGranted.style.display = 'none';
-          confirmationPage.style.display = 'block';
-        }, 2000);
-      }
+      setTimeout(() => {
+        accessGranted.style.display = "none";
+        confirmationPage.style.display = "block";
+      }, 2000);
+
     } catch (err) {
-      messageDiv.textContent = 'Unerwarteter Fehler: ' + err.message;
-      messageDiv.className = 'error';
+      messageDiv.textContent = "Fehler: " + err.message;
+      messageDiv.className = "error";
     }
   });
 
-  // Checkbox aktiviert den Weiter-Button
-  securityConfirm.addEventListener('change', () => {
+  securityConfirm.addEventListener("change", () => {
     proceedBtn.disabled = !securityConfirm.checked;
   });
 
-  // Weiter zur Warteschlange
-  proceedBtn.addEventListener('click', () => {
-    confirmationPage.style.display = 'none';
-    waitingPage.style.display = 'block';
-
-    // Simulierter Platz in der Warteschlange
-    let pos = Math.floor(Math.random() * 20) + 1;
-    document.getElementById('queuePos').textContent = pos;
+  proceedBtn.addEventListener("click", () => {
+    confirmationPage.style.display = "none";
+    waitingPage.style.display = "block";
+    document.getElementById("queuePos").textContent = Math.floor(Math.random() * 20) + 1;
   });
-</script>
 
+});
+</script>
 </body>
 </html>
+
