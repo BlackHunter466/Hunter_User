@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spielerprofil erstellen</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #fff;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+      color: #333;
+    }
+    label {
+      display: block;
+      text-align: left;
+      margin-top: 1rem;
+      font-weight: bold;
+      color: #444;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 0.7rem;
+      margin-top: 0.3rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+    button {
+      background: #1e88e5;
+      color: white;
+      border: none;
+      margin-top: 1.5rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #1565c0;
+    }
+    .success {
+      margin-top: 1rem;
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      margin-top: 1rem;
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Spielerprofil erstellen</h1>
+  <form id="playerForm">
+    <label for="nickname">Nickname</label>
+    <input type="text" id="nickname" name="Nickname" required>
+
+    <label for="haender">Händigkeit</label>
+    <select id="haender" name="haender" required>
+      <option value="links">Links</option>
+      <option value="rechts">Rechts</option>
+    </select>
+
+    <label for="gender">Gender</label>
+    <select id="gender" name="Gender" required>
+      <option value="m">Männlich</option>
+      <option value="w">Weiblich</option>
+      <option value="d">Divers</option>
+    </select>
+
+    <button type="submit">Speichern</button>
+  </form>
+  <div id="message"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  document.getElementById('playerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nickname = document.getElementById('nickname').value.trim();
+    const haender = document.getElementById('haender').value;
+    const gender = document.getElementById('gender').value;
+    const messageDiv = document.getElementById('message');
+
+    // Eintrag in Supabase speichern
+    const { data, error } = await supabase
+      .from('players')
+      .insert([{
+        Nickname: nickname,
+        haender: haender,
+        Gender: gender,
+        is_ready: false
+      }])
+      .select('id')
+      .single();
+
+    if (error) {
+      messageDiv.textContent = 'Fehler: ' + error.message;
+      messageDiv.className = 'error';
+    } else {
+      // UUID im Browser speichern, damit Unity später weiß, welcher Spieler das ist
+      localStorage.setItem('player_id', data.id);
+      messageDiv.textContent = 'Profil gespeichert! Deine ID: ' + data.id;
+      messageDiv.className = 'success';
+    }
+  });
+</script>
+
+</body>
+</html>
