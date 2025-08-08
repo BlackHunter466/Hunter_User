@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Agenten-Datenbank – Spielerprofil</title>
+<title>Agenten-Login – Spielerprofil</title>
 <style>
   body {
     font-family: 'Courier New', monospace;
@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       const { data, error } = await supabaseClient
-        .from("players")
+        .from("Players")
         .insert([{ Nickname: nickname, haender, Gender: gender, is_ready: false }])
         .select("id")
         .single();
