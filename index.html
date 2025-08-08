@@ -1,78 +1,117 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Spielerprofil erstellen</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #1e3c72, #2a5298);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .card {
-      background: #fff;
-      padding: 2rem;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-      max-width: 400px;
-      width: 100%;
-      text-align: center;
-    }
-    h1 {
-      margin-bottom: 1rem;
-      font-size: 1.5rem;
-      color: #333;
-    }
-    label {
-      display: block;
-      text-align: left;
-      margin-top: 1rem;
-      font-weight: bold;
-      color: #444;
-    }
-    input, select, button {
-      width: 100%;
-      padding: 0.7rem;
-      margin-top: 0.3rem;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-      font-size: 1rem;
-    }
-    button {
-      background: #1e88e5;
-      color: white;
-      border: none;
-      margin-top: 1.5rem;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background: #1565c0;
-    }
-    .success {
-      margin-top: 1rem;
-      color: green;
-      font-weight: bold;
-    }
-    .error {
-      margin-top: 1rem;
-      color: red;
-      font-weight: bold;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Agenten-Datenbank – Spielerprofil</title>
+<style>
+  body {
+    font-family: 'Courier New', monospace;
+    background: #000;
+    color: #00ff99;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .card {
+    background: rgba(0, 0, 0, 0.85);
+    border: 2px solid #00ff99;
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 0 15px #00ff99;
+    text-align: center;
+  }
+  h1 {
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+    color: #00ff99;
+  }
+  label {
+    display: block;
+    text-align: left;
+    margin-top: 1rem;
+    font-weight: bold;
+  }
+  input, select, button {
+    width: 100%;
+    padding: 0.7rem;
+    margin-top: 0.3rem;
+    border-radius: 4px;
+    border: 1px solid #00ff99;
+    background: #111;
+    color: #00ff99;
+    font-size: 1rem;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: #0ff;
+    box-shadow: 0 0 8px #0ff;
+  }
+  button {
+    background: #00ff99;
+    color: #000;
+    border: none;
+    margin-top: 1.5rem;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+  }
+  button:hover {
+    background: #0ff;
+    box-shadow: 0 0 10px #0ff;
+  }
+  .success {
+    margin-top: 1rem;
+    color: #00ff99;
+    font-weight: bold;
+  }
+  .error {
+    margin-top: 1rem;
+    color: red;
+    font-weight: bold;
+  }
+  .security-warning {
+    margin-top: 2rem;
+    text-align: left;
+    font-size: 0.9rem;
+    border-top: 1px dashed #00ff99;
+    padding-top: 1rem;
+    color: #ff4444;
+  }
+  /* Zugriff gewährt Animation */
+  #accessGranted {
+    display: none;
+    font-size: 2rem;
+    color: #00ff99;
+    animation: blink 0.8s infinite alternate;
+  }
+  @keyframes blink {
+    0% { opacity: 1; }
+    100% { opacity: 0.4; }
+  }
+  /* Warteschlangen-Seite */
+  #waitingPage p {
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+  }
+</style>
 </head>
 <body>
 
-<div class="card">
-  <h1>Spielerprofil erstellen</h1>
+<!-- Formularseite -->
+<div id="formPage" class="card">
+  <h1>Agenten-Datenbank</h1>
   <form id="playerForm">
-    <label for="nickname">Nickname</label>
-    <input type="text" id="nickname" name="Nickname" required>
+    <label for="nickname">Deckname</label>
+    <input type="text" id="nickname" name="Nickname" required placeholder="Codename eingeben">
 
     <label for="haender">Händigkeit</label>
     <select id="haender" name="haender" required>
@@ -80,52 +119,114 @@
       <option value="rechts">Rechts</option>
     </select>
 
-    <label for="gender">Gender</label>
+    <label for="gender">Geschlecht</label>
     <select id="gender" name="Gender" required>
       <option value="m">Männlich</option>
       <option value="w">Weiblich</option>
       <option value="d">Divers</option>
     </select>
 
-    <button type="submit">Speichern</button>
+    <button type="submit">Profil sichern</button>
   </form>
   <div id="message"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Zugriff gewährt Animation -->
+<div id="accessGranted">ZUGRIFF GEWÄHRT...</div>
+
+<!-- Bestätigungsseite -->
+<div id="confirmationPage" class="card" style="display:none;">
+  <h1>Agentenprofil gespeichert</h1>
+  <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
+  <div class="security-warning">
+    <h3>Sicherheitsrichtlinien:</h3>
+    <ul>
+      <li>Diese Datenbank ist streng geheim.</li>
+      <li>Zugriff nur für autorisierte Agenten.</li>
+      <li>Alle Aktionen werden protokolliert.</li>
+    </ul>
+  </div>
+  <label style="margin-top:1rem;">
+    <input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen
+  </label>
+  <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
+</div>
+
+<!-- Warteschlangen-Seite -->
+<div id="waitingPage" class="card" style="display:none;">
+  <h1>Einsatzwarteschlange</h1>
+  <p>Bitte warten, bis Sie aufgerufen werden...</p>
+  <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
+</div>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 <script>
   const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+  const supabaseKey ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
   const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+  const formPage = document.getElementById('formPage');
+  const accessGranted = document.getElementById('accessGranted');
+  const confirmationPage = document.getElementById('confirmationPage');
+  const waitingPage = document.getElementById('waitingPage');
+  const messageDiv = document.getElementById('message');
+  const proceedBtn = document.getElementById('proceedBtn');
+  const securityConfirm = document.getElementById('securityConfirm');
 
   document.getElementById('playerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const nickname = document.getElementById('nickname').value.trim();
     const haender = document.getElementById('haender').value;
     const gender = document.getElementById('gender').value;
-    const messageDiv = document.getElementById('message');
 
-    // Eintrag in Supabase speichern
-    const { data, error } = await supabase
-      .from('players')
-      .insert([{
-        Nickname: nickname,
-        haender: haender,
-        Gender: gender,
-        is_ready: false
-      }])
-      .select('id')
-      .single();
-
-    if (error) {
-      messageDiv.textContent = 'Fehler: ' + error.message;
+    if (!nickname) {
+      messageDiv.textContent = '⚠ Bitte Decknamen eingeben.';
       messageDiv.className = 'error';
-    } else {
-      // UUID im Browser speichern, damit Unity später weiß, welcher Spieler das ist
-      localStorage.setItem('player_id', data.id);
-      messageDiv.textContent = 'Profil gespeichert! Deine ID: ' + data.id;
-      messageDiv.className = 'success';
+      return;
     }
+
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .insert([{ Nickname: nickname, haender: haender, Gender: gender, is_ready: false }])
+        .select('id')
+        .single();
+
+      if (error) {
+        messageDiv.textContent = 'Fehler: ' + error.message;
+        messageDiv.className = 'error';
+      } else {
+        localStorage.setItem('player_id', data.id);
+
+        // Zugriff gewährt Animation zeigen
+        formPage.style.display = 'none';
+        accessGranted.style.display = 'block';
+
+        setTimeout(() => {
+          accessGranted.style.display = 'none';
+          confirmationPage.style.display = 'block';
+        }, 2000);
+      }
+    } catch (err) {
+      messageDiv.textContent = 'Unerwarteter Fehler: ' + err.message;
+      messageDiv.className = 'error';
+    }
+  });
+
+  // Checkbox aktiviert den Weiter-Button
+  securityConfirm.addEventListener('change', () => {
+    proceedBtn.disabled = !securityConfirm.checked;
+  });
+
+  // Weiter zur Warteschlange
+  proceedBtn.addEventListener('click', () => {
+    confirmationPage.style.display = 'none';
+    waitingPage.style.display = 'block';
+
+    // Simulierter Platz in der Warteschlange
+    let pos = Math.floor(Math.random() * 20) + 1;
+    document.getElementById('queuePos').textContent = pos;
   });
 </script>
 
