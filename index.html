@@ -1,246 +1,271 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Agenten-Datenbank – Spielerprofil</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Agenten—DB (debuggable)</title>
 <style>
-  body {
-    font-family: 'Courier New', monospace;
-    background: #000;
-    color: #00ff99;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-  }
-  .card {
-    background: rgba(0, 0, 0, 0.85);
-    border: 2px solid #00ff99;
-    padding: 2rem;
-    border-radius: 8px;
-    max-width: 500px;
-    width: 100%;
-    box-shadow: 0 0 15px #00ff99;
-    text-align: center;
-  }
-  h1 {
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
-    color: #00ff99;
-  }
-  label {
-    display: block;
-    text-align: left;
-    margin-top: 1rem;
-    font-weight: bold;
-  }
-  input, select, button {
-    width: 100%;
-    padding: 0.7rem;
-    margin-top: 0.3rem;
-    border-radius: 4px;
-    border: 1px solid #00ff99;
-    background: #111;
-    color: #00ff99;
-    font-size: 1rem;
-  }
-  input:focus, select:focus {
-    outline: none;
-    border-color: #0ff;
-    box-shadow: 0 0 8px #0ff;
-  }
-  button {
-    background: #00ff99;
-    color: #000;
-    border: none;
-    margin-top: 1.5rem;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s ease;
-  }
-  button:hover {
-    background: #0ff;
-    box-shadow: 0 0 10px #0ff;
-  }
-  small {
-    color: #0ff;
-    font-size: 0.8rem;
-    display: block;
-    margin-top: 0.2rem;
-    text-align: left;
-  }
-  .success {
-    margin-top: 1rem;
-    color: #00ff99;
-    font-weight: bold;
-  }
-  .error {
-    margin-top: 1rem;
-    color: red;
-    font-weight: bold;
-  }
-  .security-warning {
-    margin-top: 2rem;
-    text-align: left;
-    font-size: 0.9rem;
-    border-top: 1px dashed #00ff99;
-    padding-top: 1rem;
-    color: #ff4444;
-  }
+  body{font-family:Courier,monospace;background:#000;color:#00ff99;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+  .card{background:rgba(0,0,0,.85);border:2px solid #00ff99;padding:2rem;border-radius:8px;max-width:520px;width:100%;box-shadow:0 0 15px #00ff99;text-align:center}
+  input,select,button{width:100%;padding:.7rem;margin-top:.3rem;border-radius:4px;border:1px solid #00ff99;background:#111;color:#00ff99}
+  small{color:#0ff;font-size:.8rem;display:block;margin-top:.2rem;text-align:left}
+  .error{color:#ff6666;font-weight:bold;margin-top:1rem}
+  .success{color:#00ff99;font-weight:bold;margin-top:1rem}
+  #debug{margin-top:1rem;text-align:left;color:#ccc;font-size:.8rem;white-space:pre-wrap;max-height:140px;overflow:auto;background:#071217;padding:.5rem;border-radius:6px;border:1px dashed #003}
 </style>
 </head>
 <body>
+  <div id="formPage" class="card">
+    <h1>Agenten-Datenbank</h1>
+    <form id="playerForm">
+      <label for="nickname">Deckname</label>
+      <input id="nickname" name="Nickname" required placeholder="Codename eingeben" />
+      <small>Bitte keinen echten Namen verwenden!</small>
 
-<!-- Formularseite -->
-<div id="formPage" class="card">
-  <h1>Agenten-Datenbank</h1>
-  <form id="playerForm">
-    <label for="nickname">Deckname</label>
-    <input type="text" id="nickname" name="Nickname" required placeholder="Codename eingeben">
-    <small>Bitte keinen echten Namen verwenden!</small>
+      <label for="haender">Händigkeit</label>
+      <select id="haender" name="haender" required>
+        <option value="links">Links</option>
+        <option value="rechts">Rechts</option>
+      </select>
 
-    <label for="haender">Händigkeit</label>
-    <select id="haender" name="haender" required>
-      <option value="links">Links</option>
-      <option value="rechts">Rechts</option>
-    </select>
+      <label for="gender">Geschlecht</label>
+      <select id="gender" name="Gender" required>
+        <option value="m">Männlich</option>
+        <option value="w">Weiblich</option>
+        <option value="d">Divers</option>
+      </select>
 
-    <label for="gender">Geschlecht</label>
-    <select id="gender" name="Gender" required>
-      <option value="m">Männlich</option>
-      <option value="w">Weiblich</option>
-      <option value="d">Divers</option>
-    </select>
+      <button type="submit">Profil sichern</button>
+    </form>
 
-    <button type="submit">Profil sichern</button>
-  </form>
-  <div id="message"></div>
-</div>
-
-<!-- Bestätigungsseite -->
-<div id="confirmationPage" class="card" style="display:none;">
-  <h1>Agentenprofil gespeichert</h1>
-  <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
-  <div class="security-warning">
-    <h3>Sicherheitsrichtlinien:</h3>
-    <ul>
-      <li>Diese Datenbank ist streng geheim.</li>
-      <li>Zugriff nur für autorisierte Agenten.</li>
-      <li>Alle Aktionen werden protokolliert.</li>
-    </ul>
+    <div id="message" aria-live="polite"></div>
+    <div id="debug" style="display:none;"></div>
   </div>
-  <label style="margin-top:1rem;">
-    <input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen
-  </label>
-  <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
-</div>
 
-<!-- Warteschlangen-Seite -->
-<div id="waitingPage" class="card" style="display:none;">
-  <h1>Einsatzwarteschlange</h1>
-  <p>Bitte warten, bis Sie aufgerufen werden...</p>
-  <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
-</div>
+  <div id="confirmationPage" class="card" style="display:none">
+    <h1>Agentenprofil gespeichert</h1>
+    <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
+    <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen</label>
+    <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
+    <div id="confMessage"></div>
+  </div>
 
-<!-- Supabase SDK -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-<script>
-  const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
-  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+  <div id="waitingPage" class="card" style="display:none">
+    <h1>Einsatzwarteschlange</h1>
+    <p>Bitte warten...</p>
+    <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
+    <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
+  </div>
 
-  const formPage = document.getElementById('formPage');
-  const confirmationPage = document.getElementById('confirmationPage');
-  const waitingPage = document.getElementById('waitingPage');
-  const messageDiv = document.getElementById('message');
-  const proceedBtn = document.getElementById('proceedBtn');
-  const securityConfirm = document.getElementById('securityConfirm');
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
+  <script>
+  (function(){
+    // ----------------- CONFIG -----------------
+    const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+    const TABLE_CANDIDATES = ['players','Players']; // probiere beide
+    // ------------------------------------------
 
-  document.getElementById('playerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    messageDiv.textContent = '';
-    messageDiv.className = '';
-
-    const nickname = document.getElementById('nickname').value.trim();
-    const haender = document.getElementById('haender').value;
-    const gender = document.getElementById('gender').value;
-
-    if (!nickname) {
-      messageDiv.textContent = '⚠ Bitte Decknamen eingeben.';
-      messageDiv.className = 'error';
-      return;
+    const messageDiv = document.getElementById('message');
+    const debugDiv = document.getElementById('debug');
+    function showMessage(text, kind='') {
+      messageDiv.textContent = text;
+      messageDiv.className = kind;
+    }
+    function appendDebug(txt) {
+      console.log(txt);
+      debugDiv.style.display = '';
+      debugDiv.textContent = (debugDiv.textContent ? debugDiv.textContent + '\n' : '') + txt;
     }
 
-    try {
-      const { data, error } = await supabase
-        .from('Players')
-        .insert([{ Nickname: nickname, haender: haender, Gender: gender, is_ready: false }])
-        .select('id, created_at')
-        .single();
+    // safe init: suche createClient
+    function getCreateClientFn() {
+      if (window.supabase && typeof window.supabase.createClient === 'function') return window.supabase.createClient;
+      if (window.Supabase && typeof window.Supabase.createClient === 'function') return window.Supabase.createClient;
+      return null;
+    }
 
-      if (error) {
-        messageDiv.textContent = 'Fehler: ' + error.message;
-        messageDiv.className = 'error';
-      } else {
+    const createClientFn = getCreateClientFn();
+    if (!createClientFn) {
+      showMessage('Fatal: Supabase SDK nicht gefunden oder inkompatibel. Prüfe das <script>-Tag.', 'error');
+      appendDebug('SDK missing: window.supabase or window.Supabase has no createClient');
+      return;
+    }
+    const supabase = createClientFn(supabaseUrl, supabaseKey);
+    appendDebug('Supabase SDK initialisiert.');
+
+    // Tabelle erkennen (players / Players)
+    let resolvedTable = null;
+    async function detectTable() {
+      appendDebug('Suche nach existierender Tabelle unter Kandidaten: ' + JSON.stringify(TABLE_CANDIDATES));
+      for (const t of TABLE_CANDIDATES) {
+        try {
+          const { data, error } = await supabase.from(t).select('id').limit(1);
+          if (!error) {
+            appendDebug('Tabelle gefunden: ' + t);
+            return t;
+          } else {
+            appendDebug('Test auf Tabelle "' + t + '" ergab Fehler: ' + JSON.stringify(error));
+            // falls error.message enthält "Could not find the table" -> weiter
+          }
+        } catch (err) {
+          appendDebug('Exception beim Testen von Tabelle "'+t+'": ' + err.message);
+        }
+      }
+      return null;
+    }
+
+    // öffentliche Referenzen
+    const formPage = document.getElementById('formPage');
+    const confirmationPage = document.getElementById('confirmationPage');
+    const waitingPage = document.getElementById('waitingPage');
+    const proceedBtn = document.getElementById('proceedBtn');
+    const securityConfirm = document.getElementById('securityConfirm');
+    const queuePosSpan = document.getElementById('queuePos');
+    const waitingDebug = document.getElementById('waitingDebug');
+
+    // Formular submit
+    document.getElementById('playerForm').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      showMessage('', '');
+      debugDiv.textContent = '';
+
+      // detect table if not done
+      if (!resolvedTable) {
+        resolvedTable = await detectTable();
+        if (!resolvedTable) {
+          showMessage('Keine passende Tabelle gefunden (players/Players). Prüfe DB.', 'error');
+          appendDebug('Keine Tabelle erkannt. Abbruch.');
+          return;
+        }
+      }
+      appendDebug('Benutze Tabelle: ' + resolvedTable);
+
+      const nickname = document.getElementById('nickname').value.trim();
+      const haender = document.getElementById('haender').value;
+      const gender = document.getElementById('gender').value;
+      if (!nickname) {
+        showMessage('⚠ Bitte Decknamen eingeben.', 'error');
+        return;
+      }
+
+      // Insert attempt with debug
+      appendDebug('Versuche Insert in "' + resolvedTable + '" ...');
+      try {
+        const payload = { Nickname: nickname, haender: haender, Gender: gender, is_ready: false };
+        appendDebug('Payload: ' + JSON.stringify(payload));
+        const { data, error } = await supabase
+          .from(resolvedTable)
+          .insert([payload])
+          .select('id, created_at')
+          .single();
+
+        if (error) {
+          appendDebug('Insert Fehler: ' + JSON.stringify(error));
+          // Spezialfall: row level security
+          if (error.message && error.message.toLowerCase().includes('row-level')) {
+            showMessage('Fehler: RLS blockiert den Insert. Entweder RLS abschalten oder passende Policy anlegen.', 'error');
+            return;
+          }
+          showMessage('Fehler beim Speichern: ' + (error.message || JSON.stringify(error)), 'error');
+          return;
+        }
+
+        if (!data) {
+          appendDebug('Insert lieferte keine data zurück.');
+          showMessage('Insert erfolgreich, aber keine ID zurückerhalten. Prüfe Tabellenschema.', 'error');
+          return;
+        }
+
+        appendDebug('Insert erfolgreich: ' + JSON.stringify(data));
+        // speichern
         localStorage.setItem('player_id', data.id);
-
+        localStorage.setItem('player_created_at', data.created_at || '');
         formPage.style.display = 'none';
         confirmationPage.style.display = 'block';
+        showMessage('Profil gespeichert. ID: ' + data.id, 'success');
+
+      } catch (err) {
+        appendDebug('Exception beim Insert: ' + err.message);
+        showMessage('Unerwarteter Fehler: ' + err.message, 'error');
       }
-    } catch (err) {
-      messageDiv.textContent = 'Unerwarteter Fehler: ' + err.message;
-      messageDiv.className = 'error';
-    }
-  });
+    });
 
-  securityConfirm.addEventListener('change', () => {
-    proceedBtn.disabled = !securityConfirm.checked;
-  });
+    // enable proceed button via checkbox
+    securityConfirm.addEventListener('change', () => {
+      proceedBtn.disabled = !securityConfirm.checked;
+    });
 
-  proceedBtn.addEventListener('click', async () => {
-    confirmationPage.style.display = 'none';
-    waitingPage.style.display = 'block';
+    // position berechnen und anzeigen
+    proceedBtn.addEventListener('click', async () => {
+      confirmationPage.style.display = 'none';
+      waitingPage.style.display = 'block';
+      waitingDebug.textContent = '';
 
-    const playerId = localStorage.getItem('player_id');
-    if (!playerId) {
-      document.getElementById('queuePos').textContent = "ID nicht gefunden";
-      return;
-    }
+      const playerId = localStorage.getItem('player_id');
+      if (!playerId) {
+        queuePosSpan.textContent = 'ID nicht gefunden';
+        return;
+      }
+      if (!resolvedTable) {
+        resolvedTable = await detectTable();
+        if (!resolvedTable) {
+          queuePosSpan.textContent = 'Keine Tabelle gefunden';
+          return;
+        }
+      }
 
-    // Spieler eigene created_at abfragen
-    const { data: meData, error: meError } = await supabase
-      .from('Players')
-      .select('created_at')
-      .eq('id', playerId)
-      .single();
+      appendDebug('Berechne Position für ID=' + playerId + ' in Tabelle ' + resolvedTable);
 
-    if (meError || !meData) {
-      document.getElementById('queuePos').textContent = "Spieler nicht gefunden";
-      return;
-    }
+      try {
+        // hole alle wartenden Einträge (is_ready=false)
+        // dann berechne index der eigenen ID — so umgehen wir Datums- oder Typprobleme
+        const { data: allWaiting, error: waitErr } = await supabase
+          .from(resolvedTable)
+          .select('id, created_at')
+          .eq('is_ready', false)
+          .order('created_at', { ascending: true }); // falls created_at existiert, sinnvoll
 
-    const myCreatedAt = meData.created_at;
+        if (waitErr) {
+          appendDebug('Fehler beim Laden der Warteschlange: ' + JSON.stringify(waitErr));
+          // Falls SELECT wegen RLS blockiert -> hilfreiche Meldung
+          if (waitErr.message && waitErr.message.toLowerCase().includes('row-level')) {
+            queuePosSpan.textContent = 'RLS blockiert SELECT (Warteschlange).';
+            return;
+          }
+          queuePosSpan.textContent = 'Fehler beim Laden';
+          return;
+        }
 
-    // Alle Spieler vor dir zählen (is_ready=false und created_at < dein created_at)
-    const { data: queueData, error: queueError } = await supabase
-      .from('Players')
-      .select('id')
-      .eq('is_ready', false)
-      .lt('created_at', myCreatedAt);
+        appendDebug('Warteliste geladen: ' + (allWaiting ? allWaiting.length : 'null'));
 
-    if (queueError) {
-      document.getElementById('queuePos').textContent = "Fehler beim Laden";
-      return;
-    }
+        if (!Array.isArray(allWaiting)) {
+          queuePosSpan.textContent = 'Keine Daten';
+          return;
+        }
 
-    const position = queueData.length + 1;
-    document.getElementById('queuePos').textContent = position;
-  });
-</script>
+        // finde Index
+        const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
+        let position;
+        if (idx >= 0) position = idx + 1;
+        else {
+          // Falls die eigene ID noch nicht in der Liste ist (seltsamer Fall), setzen wir position = length+1
+          position = allWaiting.length + 1;
+        }
 
+        queuePosSpan.textContent = position;
+        waitingDebug.textContent = 'Debug: Wartende Spieler: ' + allWaiting.length + '  (Eigenes Index:' + idx + ')';
+
+      } catch (err) {
+        appendDebug('Exception beim Berechnen der Position: ' + err.message);
+        queuePosSpan.textContent = 'Fehler beim Berechnen';
+      }
+    });
+
+    // kleiner Hinweis zur Fehlersuche (nur einmal)
+    appendDebug('Ready. Öffne die DevTools (Console) für detaillierte Logs.');
+  })();
+  </script>
 </body>
 </html>
-    
-
