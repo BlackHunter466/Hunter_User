@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Agenten-Login – Spielerprofil</title>
+<title>Agenten-Datenbank – Spielerprofil</title>
 <style>
   body {
     font-family: 'Courier New', monospace;
@@ -64,15 +64,31 @@
     background: #0ff;
     box-shadow: 0 0 10px #0ff;
   }
-  .success { color: #00ff99; font-weight: bold; }
-  .error { color: red; font-weight: bold; }
-  #accessGranted {
-    display: none;
-    font-size: 2rem;
-    color: #00ff99;
-    animation: blink 0.8s infinite alternate;
+  small {
+    color: #0ff;
+    font-size: 0.8rem;
+    display: block;
+    margin-top: 0.2rem;
+    text-align: left;
   }
-  @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0.4; } }
+  .success {
+    margin-top: 1rem;
+    color: #00ff99;
+    font-weight: bold;
+  }
+  .error {
+    margin-top: 1rem;
+    color: red;
+    font-weight: bold;
+  }
+  .security-warning {
+    margin-top: 2rem;
+    text-align: left;
+    font-size: 0.9rem;
+    border-top: 1px dashed #00ff99;
+    padding-top: 1rem;
+    color: #ff4444;
+  }
 </style>
 </head>
 <body>
@@ -83,30 +99,39 @@
   <form id="playerForm">
     <label for="nickname">Deckname</label>
     <input type="text" id="nickname" name="Nickname" required placeholder="Codename eingeben">
+    <small>Bitte keinen echten Namen verwenden!</small>
+
     <label for="haender">Händigkeit</label>
     <select id="haender" name="haender" required>
       <option value="links">Links</option>
       <option value="rechts">Rechts</option>
     </select>
+
     <label for="gender">Geschlecht</label>
     <select id="gender" name="Gender" required>
       <option value="m">Männlich</option>
       <option value="w">Weiblich</option>
       <option value="d">Divers</option>
     </select>
+
     <button type="submit">Profil sichern</button>
   </form>
   <div id="message"></div>
 </div>
 
-<!-- Zugriff gewährt -->
-<div id="accessGranted">ZUGRIFF GEWÄHRT...</div>
-
 <!-- Bestätigungsseite -->
 <div id="confirmationPage" class="card" style="display:none;">
   <h1>Agentenprofil gespeichert</h1>
   <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
-  <label>
+  <div class="security-warning">
+    <h3>Sicherheitsrichtlinien:</h3>
+    <ul>
+      <li>Diese Datenbank ist streng geheim.</li>
+      <li>Zugriff nur für autorisierte Agenten.</li>
+      <li>Alle Aktionen werden protokolliert.</li>
+    </ul>
+  </div>
+  <label style="margin-top:1rem;">
     <input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen
   </label>
   <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
@@ -115,76 +140,107 @@
 <!-- Warteschlangen-Seite -->
 <div id="waitingPage" class="card" style="display:none;">
   <h1>Einsatzwarteschlange</h1>
-  <p>Bitte warten...</p>
-  <p>Aktuelle Position: <span id="queuePos">-</span></p>
+  <p>Bitte warten, bis Sie aufgerufen werden...</p>
+  <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
 </div>
 
-<!-- Supabase SDK laden -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+  const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+  const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-  // Supabase Client sauber initialisieren
-  const supabaseUrl = "https://ydqlidnpqxuwxhlpnfon.supabase.co";
-  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c";
-  const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+  const formPage = document.getElementById('formPage');
+  const confirmationPage = document.getElementById('confirmationPage');
+  const waitingPage = document.getElementById('waitingPage');
+  const messageDiv = document.getElementById('message');
+  const proceedBtn = document.getElementById('proceedBtn');
+  const securityConfirm = document.getElementById('securityConfirm');
 
-  const formPage = document.getElementById("formPage");
-  const accessGranted = document.getElementById("accessGranted");
-  const confirmationPage = document.getElementById("confirmationPage");
-  const waitingPage = document.getElementById("waitingPage");
-  const messageDiv = document.getElementById("message");
-  const proceedBtn = document.getElementById("proceedBtn");
-  const securityConfirm = document.getElementById("securityConfirm");
-
-  document.getElementById("playerForm").addEventListener("submit", async (e) => {
+  document.getElementById('playerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const nickname = document.getElementById("nickname").value.trim();
-    const haender = document.getElementById("haender").value;
-    const gender = document.getElementById("gender").value;
+    messageDiv.textContent = '';
+    messageDiv.className = '';
+
+    const nickname = document.getElementById('nickname').value.trim();
+    const haender = document.getElementById('haender').value;
+    const gender = document.getElementById('gender').value;
 
     if (!nickname) {
-      messageDiv.textContent = "⚠ Bitte Decknamen eingeben.";
-      messageDiv.className = "error";
+      messageDiv.textContent = '⚠ Bitte Decknamen eingeben.';
+      messageDiv.className = 'error';
       return;
     }
 
     try {
-      const { data, error } = await supabaseClient
-        .from("Players")
-        .insert([{ Nickname: nickname, haender, Gender: gender, is_ready: false }])
-        .select("id")
+      const { data, error } = await supabase
+        .from('Players')
+        .insert([{ Nickname: nickname, haender: haender, Gender: gender, is_ready: false }])
+        .select('id, created_at')
         .single();
 
-      if (error) throw error;
+      if (error) {
+        messageDiv.textContent = 'Fehler: ' + error.message;
+        messageDiv.className = 'error';
+      } else {
+        localStorage.setItem('player_id', data.id);
 
-      localStorage.setItem("player_id", data.id);
-      formPage.style.display = "none";
-      accessGranted.style.display = "block";
-
-      setTimeout(() => {
-        accessGranted.style.display = "none";
-        confirmationPage.style.display = "block";
-      }, 2000);
-
+        formPage.style.display = 'none';
+        confirmationPage.style.display = 'block';
+      }
     } catch (err) {
-      messageDiv.textContent = "Fehler: " + err.message;
-      messageDiv.className = "error";
+      messageDiv.textContent = 'Unerwarteter Fehler: ' + err.message;
+      messageDiv.className = 'error';
     }
   });
 
-  securityConfirm.addEventListener("change", () => {
+  securityConfirm.addEventListener('change', () => {
     proceedBtn.disabled = !securityConfirm.checked;
   });
 
-  proceedBtn.addEventListener("click", () => {
-    confirmationPage.style.display = "none";
-    waitingPage.style.display = "block";
-    document.getElementById("queuePos").textContent = Math.floor(Math.random() * 20) + 1;
-  });
+  proceedBtn.addEventListener('click', async () => {
+    confirmationPage.style.display = 'none';
+    waitingPage.style.display = 'block';
 
-});
+    const playerId = localStorage.getItem('player_id');
+    if (!playerId) {
+      document.getElementById('queuePos').textContent = "ID nicht gefunden";
+      return;
+    }
+
+    // Spieler eigene created_at abfragen
+    const { data: meData, error: meError } = await supabase
+      .from('Players')
+      .select('created_at')
+      .eq('id', playerId)
+      .single();
+
+    if (meError || !meData) {
+      document.getElementById('queuePos').textContent = "Spieler nicht gefunden";
+      return;
+    }
+
+    const myCreatedAt = meData.created_at;
+
+    // Alle Spieler vor dir zählen (is_ready=false und created_at < dein created_at)
+    const { data: queueData, error: queueError } = await supabase
+      .from('Players')
+      .select('id')
+      .eq('is_ready', false)
+      .lt('created_at', myCreatedAt);
+
+    if (queueError) {
+      document.getElementById('queuePos').textContent = "Fehler beim Laden";
+      return;
+    }
+
+    const position = queueData.length + 1;
+    document.getElementById('queuePos').textContent = position;
+  });
 </script>
+
 </body>
 </html>
+    
 
