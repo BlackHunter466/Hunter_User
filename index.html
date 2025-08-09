@@ -119,7 +119,6 @@
             margin-left: 8px;
             vertical-align: middle;
         }
-        /* Pre Page: Equipmentausgabe */
         #prePage {
             display: none;
             position: fixed;
@@ -159,7 +158,6 @@
             background: linear-gradient(90deg, #ff6666, #ff9999);
             transform: scale(1.1);
         }
-        /* Alarm-Simulation für Push-Benachrichtigung */
         #alarmPopup {
             display: none;
             position: fixed;
@@ -263,7 +261,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
             const TABLE_NAME = 'Players';
 
             const messageDiv = document.getElementById('message');
@@ -336,14 +334,14 @@
                     Gender: genderInput.value,
                     is_ready: false,
                     created_at: new Date().toISOString(),
-                    Status: 'logged in'
+                    status: 'logged in'
                 };
 
                 try {
                     const { data, error } = await supabase
                         .from(TABLE_NAME)
                         .insert([payload])
-                        .select('id, created_at, Status')
+                        .select('id, created_at, status')
                         .single();
 
                     if (error) {
@@ -353,7 +351,7 @@
                     }
 
                     localStorage.setItem('player_id', data.id);
-                    appendDebug(`Spieler-ID gespeichert: ${data.id}, Status: ${data.Status}`);
+                    appendDebug(`Spieler-ID gespeichert: ${data.id}, Status: ${data.status}`);
                     pages.formPage.style.display = 'none';
                     pages.confirmationPage.style.display = 'block';
                 } catch (err) {
@@ -378,13 +376,13 @@
                     try {
                         const { error } = await supabase
                             .from(TABLE_NAME)
-                            .update({ is_ready: true, Status: 'waiting' })
+                            .update({ is_ready: true, status: 'waiting' })
                             .eq('id', playerId);
 
                         if (error) {
-                            appendDebug('Fehler beim Setzen von is_ready/Status: ' + error.message);
+                            appendDebug('Fehler beim Setzen von is_ready/status: ' + error.message);
                         } else {
-                            appendDebug(`is_ready und Status=waiting für Spieler ${playerId} gesetzt.`);
+                            appendDebug(`is_ready und status=waiting für Spieler ${playerId} gesetzt.`);
                             pages.confirmationPage.style.display = 'none';
                             pages.waitingPage.style.display = 'block';
                         }
@@ -438,12 +436,11 @@
             if (playerId) {
                 supabase.channel(`player-status-${playerId}`)
                     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: TABLE_NAME, filter: `id=eq.${playerId}` }, async (payload) => {
-                        appendDebug(`Status-Änderung erkannt: ${payload.new.Status}`);
-                        if (payload.new.Status === 'pre') {
+                        appendDebug(`Status-Änderung erkannt: ${payload.new.status}`);
+                        if (payload.new.status === 'pre') {
                             pages.waitingPage.style.display = 'none';
                             pages.prePage.style.display = 'block';
-                            alarmPopup.style.display = 'block'; // Simulierte Push-Benachrichtigung
-                            // Hier könnte eine echte Push-Benachrichtigung hinzugefügt werden, wenn Service Worker implementiert sind
+                            alarmPopup.style.display = 'block';
                         }
                     })
                     .subscribe((status) => {
@@ -455,7 +452,6 @@
             document.getElementById('acknowledgeBtn').addEventListener('click', () => {
                 pages.prePage.style.display = 'none';
                 alarmPopup.style.display = 'none';
-                // Hier könnte eine Rückkehr zur waitingPage oder eine andere Aktion erfolgen
             });
         });
     </script>
