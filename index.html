@@ -268,7 +268,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c'; // Ersetze mit deinem aktuellen Schlüssel
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
             const TABLE_NAME = 'Players';
 
             const messageDiv = document.getElementById('message');
@@ -297,9 +297,7 @@
                 appendDebug('SDK missing: window.supabase.createClient nicht verfügbar.');
                 return;
             }
-            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
-                realtime: { connect: true, params: { heartbeatInterval: 30000 } }
-            });
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
             appendDebug('Supabase initialisiert.');
 
             async function checkTable() {
@@ -402,7 +400,7 @@
                 }
             });
 
-            // Warteschlange aktualisieren
+            // Warteschlange aktualisieren mit Polling
             proceedBtn.addEventListener('click', async () => {
                 pages.confirmationPage.style.display = 'none';
                 pages.waitingPage.style.display = 'block';
@@ -436,62 +434,54 @@
                     }
                 }
 
+                // Initiales Update
                 await updateQueue();
 
-                supabase.channel('queue-changes')
-                    .on('postgres_changes', { 
-                        event: 'UPDATE', 
-                        schema: 'public', 
-                        table: 'Players', 
-                        filter: 'is_ready=eq.true' 
-                    }, async () => {
-                        appendDebug('Warteschlangen-Änderung erkannt – aktualisiere.');
-                        await updateQueue();
-                    })
-                    .subscribe((status) => {
-                        appendDebug(`Queue-Subscription-Status: ${status}`);
-                    }, (error) => {
-                        appendDebug(`Queue-Subscription-Fehler: ${error.message}`);
-                    });
+                // Polling alle 5 Sekunden
+                const pollingInterval = setInterval(updateQueue, 5000);
+
+                // Beende Polling, wenn die Seite gewechselt wird
+                pages.waitingPage.addEventListener('transitionend', () => {
+                    if (pages.waitingPage.style.display === 'none') {
+                        clearInterval(pollingInterval);
+                    }
+                });
             });
 
-            // Realtime-Überwachung für Status-Änderung zu 'pre'
-            function subscribeToPlayerStatus(playerId) {
+            // Status-Überwachung mit Polling
+            async function checkPlayerStatus() {
+                const playerId = localStorage.getItem('player_id');
                 if (!playerId) {
                     appendDebug('Kein playerId gefunden in localStorage.');
                     return;
                 }
-                const channel = supabase.channel(`player-status-${playerId}`)
-                    .on('postgres_changes', { 
-                        event: 'UPDATE', 
-                        schema: 'public', 
-                        table: 'Players', 
-                        filter: `id=eq.${playerId}` 
-                    }, async (payload) => {
-                        appendDebug(`Status-Änderung erkannt: ${payload.new.status}`);
-                        if (payload.new.status === 'pre') {
-                            pages.waitingPage.style.display = 'none';
-                            pages.prePage.style.display = 'block';
-                            alarmPopup.style.display = 'block';
-                        }
-                    })
-                    .on('system', { event: 'connection_state' }, (payload) => {
-                        appendDebug(`Verbindungsstatus: ${payload.state || 'Unbekannt'}`);
-                        if (payload.state === 'CLOSED' || payload.state === 'TIMED_OUT') {
-                            appendDebug('Verbindung unterbrochen, versuche Wiederverbindung...');
-                            channel.unsubscribe().then(() => subscribeToPlayerStatus(playerId));
-                        }
-                    })
-                    .subscribe((status) => {
-                        appendDebug(`Subscription-Status für ${playerId}: ${status}`);
-                    }, (error) => {
-                        appendDebug(`Subscription-Fehler: ${error.message}`);
-                    });
+
+                try {
+                    const { data, error } = await supabase
+                        .from(TABLE_NAME)
+                        .select('status')
+                        .eq('id', playerId)
+                        .single();
+
+                    if (error) {
+                        appendDebug(`Fehler beim Abrufen des Status: ${error.message}`);
+                        return;
+                    }
+                    appendDebug(`Aktueller Status: ${data.status}`);
+                    if (data.status === 'pre') {
+                        pages.waitingPage.style.display = 'none';
+                        pages.prePage.style.display = 'block';
+                        alarmPopup.style.display = 'block';
+                    }
+                } catch (err) {
+                    appendDebug(`Status-Check-Fehler: ${err.message}`);
+                }
             }
 
+            // Status-Polling alle 5 Sekunden starten, wenn playerId vorhanden
             const playerId = localStorage.getItem('player_id');
             if (playerId) {
-                subscribeToPlayerStatus(playerId);
+                setInterval(checkPlayerStatus, 5000);
             }
 
             // Bestätigungsbutton auf prePage
