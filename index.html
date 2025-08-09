@@ -57,11 +57,11 @@
             box-shadow: 0 0 10px rgba(51, 255, 187, 0.5);
         }
         button {
-            background: linear-gradient(90deg, #006633, #009966); /* Dunklerer Gradient */
+            background: linear-gradient(90deg, #006633, #009966);
             border: none;
             cursor: pointer;
             font-weight: bold;
-            color: #ffffff; /* Weißer Text */
+            color: #ffffff;
         }
         button:hover {
             background: linear-gradient(90deg, #008040, #00cc66);
@@ -72,7 +72,7 @@
             opacity: 0.6;
             transform: scale(1);
             cursor: not-allowed;
-            color: #cccccc; /* Helliger Text für deaktivierte Buttons */
+            color: #cccccc;
         }
         label {
             display: block;
@@ -268,7 +268,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c'; // Ersetze mit deinem aktuellen Schlüssel
+            const supabaseKey = 'DEIN_NEUER_ANON_KEY_HIER'; // Ersetze mit deinem aktuellen Schlüssel
             const TABLE_NAME = 'Players';
 
             const messageDiv = document.getElementById('message');
@@ -297,7 +297,9 @@
                 appendDebug('SDK missing: window.supabase.createClient nicht verfügbar.');
                 return;
             }
-            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey, {
+                realtime: { connect: true, params: { heartbeatInterval: 30000 } }
+            });
             appendDebug('Supabase initialisiert.');
 
             async function checkTable() {
@@ -454,8 +456,11 @@
             });
 
             // Realtime-Überwachung für Status-Änderung zu 'pre'
-            const playerId = localStorage.getItem('player_id');
-            if (playerId) {
+            function subscribeToPlayerStatus(playerId) {
+                if (!playerId) {
+                    appendDebug('Kein playerId gefunden in localStorage.');
+                    return;
+                }
                 const channel = supabase.channel(`player-status-${playerId}`)
                     .on('postgres_changes', { 
                         event: 'UPDATE', 
@@ -471,15 +476,22 @@
                         }
                     })
                     .on('system', { event: 'connection_state' }, (payload) => {
-                        appendDebug(`Verbindungsstatus: ${payload.state}`);
+                        appendDebug(`Verbindungsstatus: ${payload.state || 'Unbekannt'}`);
+                        if (payload.state === 'CLOSED' || payload.state === 'TIMED_OUT') {
+                            appendDebug('Verbindung unterbrochen, versuche Wiederverbindung...');
+                            channel.unsubscribe().then(() => subscribeToPlayerStatus(playerId));
+                        }
                     })
                     .subscribe((status) => {
                         appendDebug(`Subscription-Status für ${playerId}: ${status}`);
                     }, (error) => {
                         appendDebug(`Subscription-Fehler: ${error.message}`);
                     });
-            } else {
-                appendDebug('Kein playerId gefunden in localStorage.');
+            }
+
+            const playerId = localStorage.getItem('player_id');
+            if (playerId) {
+                subscribeToPlayerStatus(playerId);
             }
 
             // Bestätigungsbutton auf prePage
