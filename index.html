@@ -24,21 +24,21 @@
             border-radius: 12px;
             max-width: 550px;
             width: 100%;
-            box-shadow: 0 4px 10px rgba(0, 255, 153, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 255, 153, 0.3);
             text-align: center;
             animation: fadeInScale 0.8s ease-out;
         }
         h1 {
             font-size: 2rem;
             margin-bottom: 0.5rem;
-            text-shadow: 0 1px 2px rgba(0, 255, 153, 0.3);
+            text-shadow: 0 2px 4px rgba(0, 255, 153, 0.5);
         }
         .subtitle {
             font-size: 1.1rem;
             color: #33ffbb;
             margin-bottom: 1.5rem;
             opacity: 0.9;
-            text-shadow: 0 0.5px 1px rgba(51, 255, 187, 0.2);
+            text-shadow: 0 1px 3px rgba(51, 255, 187, 0.4);
         }
         input, select, button {
             width: 100%;
@@ -54,7 +54,7 @@
         input:focus, select:focus {
             outline: none;
             border-color: #33ffbb;
-            box-shadow: 0 0 5px rgba(51, 255, 187, 0.3);
+            box-shadow: 0 0 10px rgba(51, 255, 187, 0.5);
         }
         button {
             background: linear-gradient(90deg, #006633, #009966);
@@ -65,7 +65,7 @@
         }
         button:hover {
             background: linear-gradient(90deg, #008040, #00cc66);
-            transform: scale(1.03);
+            transform: scale(1.05);
         }
         button:disabled {
             background: linear-gradient(90deg, #003d1a, #005f33);
@@ -109,7 +109,7 @@
             background: rgba(10, 10, 26, 0.7);
             padding: 0.6rem;
             border-radius: 8px;
-            border: 1px dashed #33bbff;
+            border: 1px dashed #33ffbb;
             transition: opacity 0.3s ease;
         }
         #debug:empty {
@@ -119,11 +119,11 @@
             border: 4px solid rgba(34, 34, 34, 0.8);
             border-top: 4px solid #00ff99;
             border-radius: 50%;
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
             animation: spin 1.2s linear infinite;
             display: inline-block;
-            margin-left: 6px;
+            margin-left: 8px;
             vertical-align: middle;
         }
         #prePage {
@@ -133,57 +133,71 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: linear-gradient(45deg, #ff3333, #ff6666);
             color: #ffffff;
             justify-content: center;
             align-items: center;
             z-index: 1000;
-            animation: fadeInScale 0.8s ease-out;
+            animation: flash 1s infinite alternate, fadeInScale 0.8s ease-out;
         }
         #prePage .card {
-            background: rgba(26, 26, 46, 0.9);
-            border-color: #00ff99;
-            box-shadow: 0 5px 15px rgba(0, 255, 153, 0.2);
-            padding: 2rem;
+            background: linear-gradient(145deg, rgba(255, 51, 51, 0.9), rgba(255, 102, 102, 0.9));
+            border-color: #ff9999;
+            box-shadow: 0 10px 30px rgba(255, 102, 102, 0.5);
+            padding: 3rem;
             position: relative;
             overflow: hidden;
+            text-align: center;
         }
         #prePage h1 {
-            font-size: 2rem;
-            text-shadow: 0 0 5px #ffffff;
-            margin-bottom: 1rem;
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #ffffff, 0 0 20px #ff6666;
+            animation: bounce 0.8s ease-in-out infinite;
         }
         #prePage p {
-            font-size: 1rem;
-            margin: 0.5rem 0;
-            text-shadow: 0 0 2px #ffffff;
+            font-size: 1.2rem;
+            margin: 1rem 0;
+            text-shadow: 0 0 5px #ffffff;
         }
         #prePage button {
-            background: linear-gradient(90deg, #006633, #009966);
-            padding: 0.8rem;
-            font-size: 1rem;
+            background: linear-gradient(90deg, #ff3333, #ff6666);
+            padding: 1rem;
+            font-size: 1.2rem;
         }
         #prePage button:hover {
-            background: linear-gradient(90deg, #008040, #00cc66);
-            transform: scale(1.03);
+            background: linear-gradient(90deg, #ff6666, #ff9999);
+            transform: scale(1.1);
         }
         .arrow-animation {
             position: absolute;
-            bottom: -40px;
+            bottom: -50px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-bottom: 30px solid transparent;
-            border-top: 30px solid #0000ff; /* Blauer Rand */
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 40px solid #00ff99;
             animation: arrowReveal 1.5s ease-out forwards;
             z-index: 1;
         }
         @keyframes arrowReveal {
-            0% { height: 0; opacity: 0; }
-            100% { height: 60px; opacity: 1; transform: translateX(-50%) translateY(-60px); }
+            0% { opacity: 0; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 1; transform: translateX(-50%) translateY(-60px); }
+        }
+        #alarmPopup {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff3333;
+            color: #ffffff;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            box-shadow: 0 0 15px #ff6666;
+            z-index: 2000;
+            animation: pulse 1s infinite;
+            font-weight: bold;
         }
         @keyframes fadeInScale {
             from { opacity: 0; transform: scale(0.95); }
@@ -200,6 +214,14 @@
             0% { transform: scale(1); }
             50% { transform: scale(1.05); }
             100% { transform: scale(1); }
+        }
+        @keyframes flash {
+            from { background: linear-gradient(45deg, #ff3333, #ff6666); }
+            to { background: linear-gradient(45deg, #ff6666, #ff9999); }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
         .card[style*="display: none"] {
             animation: fadeOut 0.5s ease-out;
@@ -256,7 +278,7 @@
     <div id="prePage" class="card" style="display:none">
         <div class="arrow-animation"></div>
         <h1>ALARM! ZUR AUSRÜSTUNG!</h1>
-        <p>Melden Sie sich zur Equipmentausgabe.</p>
+        <p>Agent, melden Sie sich sofort zur Equipmentausgabe! Es geht los!</p>
         <button id="acknowledgeBtn">Bestätigen</button>
     </div>
 
@@ -293,16 +315,8 @@
                 appendDebug('SDK missing: window.supabase.createClient nicht verfügbar.');
                 return;
             }
-
-            let supabase;
-            try {
-                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                appendDebug('Supabase-Client erfolgreich initialisiert.');
-            } catch (err) {
-                showMessage('Fehler bei der Initialisierung von Supabase: ' + err.message, 'error');
-                appendDebug('Initialisierungsfehler: ' + err.message);
-                return;
-            }
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            appendDebug('Supabase initialisiert.');
 
             async function checkTable() {
                 appendDebug(`Prüfe Tabelle "${TABLE_NAME}"...`);
@@ -310,14 +324,12 @@
                     const { data, error } = await supabase.from(TABLE_NAME).select('id').limit(1);
                     if (error) {
                         appendDebug(`Fehler bei Tabelle "${TABLE_NAME}": ${error.message} (Status: ${error.status}, Details: ${JSON.stringify(error)})`);
-                        showMessage(`Tabelle "${TABLE_NAME}" nicht zugänglich: ${error.message}`, 'error');
                         return false;
                     }
-                    appendDebug(`Tabelle "${TABLE_NAME}" gefunden und zugänglich. Daten: ${JSON.stringify(data)}`);
+                    appendDebug(`Tabelle "${TABLE_NAME}" gefunden und zugänglich.`);
                     return true;
                 } catch (err) {
                     appendDebug(`Unerwarteter Fehler bei Tabellenprüfung: ${err.message}`);
-                    showMessage('Unerwarteter Fehler bei der Tabellenprüfung.', 'error');
                     return false;
                 }
             }
@@ -328,7 +340,7 @@
                 return;
             }
 
-            // Formular absenden mit verbesserter Prüfung auf doppelte Anmeldung
+            // Formular absenden mit Prüfung auf doppelte Anmeldung
             document.getElementById('playerForm').addEventListener('submit', async (ev) => {
                 ev.preventDefault();
                 debugDiv.textContent = '';
@@ -342,37 +354,21 @@
                     return;
                 }
 
-                // Prüfe auf doppelte Anmeldung basierend auf Nickname und IP oder lokalem Identifier
+                // Prüfung auf doppelte Anmeldung
                 try {
-                    const { data: existingPlayers, error: checkError } = await supabase
+                    const { data: existingPlayers, error } = await supabase
                         .from(TABLE_NAME)
                         .select('id')
                         .eq('Nickname', nicknameInput.value.trim());
 
-                    if (checkError) {
-                        appendDebug(`Fehler beim Prüfen auf doppelte Anmeldung: ${checkError.message} (Status: ${checkError.status})`);
-                        showMessage('Fehler beim Prüfen der Anmeldung.', 'error');
+                    if (error) {
+                        appendDebug(`Fehler beim Prüfen auf doppelte Anmeldung: ${error.message}`);
                         return;
                     }
 
                     if (existingPlayers && existingPlayers.length > 0) {
                         showMessage('Dieser Deckname ist bereits registriert. Bitte wähle einen anderen.', 'error');
                         return;
-                    }
-
-                    // Zusätzliche Prüfung mit localStorage-ID (falls verfügbar)
-                    const localPlayerId = localStorage.getItem('player_id');
-                    if (localPlayerId) {
-                        const { data: existingLocal, error: localError } = await supabase
-                            .from(TABLE_NAME)
-                            .select('id')
-                            .eq('id', localPlayerId);
-                        if (localError) {
-                            appendDebug(`Fehler bei lokaler ID-Prüfung: ${localError.message}`);
-                        } else if (existingLocal && existingLocal.length > 0) {
-                            showMessage('Du bist bereits angemeldet. Bitte verlasse die aktive Session.', 'error');
-                            return;
-                        }
                     }
 
                     const payload = {
@@ -391,7 +387,6 @@
                         .single();
 
                     if (error) {
-                        appendDebug(`Fehler beim Speichern: ${error.message} (Status: ${error.status}, Details: ${JSON.stringify(error)})`);
                         showMessage('Fehler beim Speichern: ' + error.message, 'error');
                         return;
                     }
@@ -401,11 +396,11 @@
                     pages.formPage.style.display = 'none';
                     pages.confirmationPage.style.display = 'block';
                 } catch (err) {
-                    appendDebug(`Unerwarteter Fehler beim Speichern: ${err.message}`);
                     showMessage('Unerwarteter Fehler beim Speichern: ' + err.message, 'error');
                 }
             });
 
+            // ... (Rest des Codes bleibt gleich)
             // Sicherheitsbestätigung
             const securityConfirm = document.getElementById('securityConfirm');
             const proceedBtn = document.getElementById('proceedBtn');
@@ -426,16 +421,14 @@
                             .eq('id', playerId);
 
                         if (error) {
-                            appendDebug(`Fehler beim Setzen von is_ready/status: ${error.message} (Status: ${error.status})`);
-                            showMessage('Fehler beim Aktualisieren des Status: ' + error.message, 'error');
+                            appendDebug('Fehler beim Setzen von is_ready/status: ' + error.message);
                         } else {
                             appendDebug(`is_ready und status=waiting für Spieler ${playerId} gesetzt.`);
                             pages.confirmationPage.style.display = 'none';
                             pages.waitingPage.style.display = 'block';
                         }
                     } catch (err) {
-                        appendDebug(`Update-Catch: ${err.message}`);
-                        showMessage('Unerwarteter Fehler beim Status-Update: ' + err.message, 'error');
+                        appendDebug('Update-Catch: ' + err.message);
                     }
                 }
             });
@@ -448,62 +441,49 @@
 
                 async function updateQueue() {
                     try {
-                        appendDebug('Starte Warteschlangen-Update...');
                         const { data: allWaiting, error } = await supabase
-                            .from('Players')
+                            .from(TABLE_NAME)
                             .select('id, created_at')
                             .eq('is_ready', true)
                             .order('created_at', { ascending: true });
 
                         if (error) {
-                            appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message} (Status: ${error.status}, Details: ${JSON.stringify(error)})`);
+                            appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message}`);
                             queuePos.textContent = 'Fehler beim Laden';
                             return;
                         }
-                        appendDebug(`Abruf erfolgreich, ${allWaiting.length} Einträge gefunden. Daten: ${JSON.stringify(allWaiting)}`);
+                        appendDebug(`Abruf erfolgreich, ${allWaiting.length} Einträge gefunden.`);
                         if (!allWaiting || allWaiting.length === 0) {
                             appendDebug('Keine wartenden Spieler gefunden.');
                             queuePos.textContent = '1';
                             return;
                         }
 
-                        // Position basierend auf created_at und playerId
-                        const myEntry = allWaiting.find(item => String(item.id) === String(playerId));
-                        if (!myEntry) {
+                        // Suche den Index des current players
+                        const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
+                        if (idx === -1) {
                             appendDebug('Spieler nicht in Warteschlange gefunden.');
                             queuePos.textContent = 'Nicht in Warteschlange';
                             return;
                         }
-                        const position = allWaiting.findIndex(item => item.created_at === myEntry.created_at) + 1;
-                        queuePos.textContent = position;
-                        document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${position}`;
-                        appendDebug(`Position berechnet: ${position}`);
+                        queuePos.textContent = idx + 1;
+                        document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${idx + 1}`;
                     } catch (err) {
                         appendDebug(`Queue-Update-Fehler: ${err.message}`);
                         queuePos.textContent = 'Fehler aufgetreten';
                     }
                 }
 
-                // Initiales Update
                 await updateQueue();
 
-                // Polling alle 5 Sekunden
-                const pollingInterval = setInterval(updateQueue, 5000);
-
-                // Beende Polling, wenn die Seite gewechselt wird
-                pages.waitingPage.addEventListener('transitionend', () => {
-                    if (pages.waitingPage.style.display === 'none') {
-                        clearInterval(pollingInterval);
-                        appendDebug('Polling für Warteschlange beendet.');
-                    }
-                });
+                setInterval(updateQueue, 5000);
             });
 
             // Status-Überwachung mit Polling
             async function checkPlayerStatus() {
                 const playerId = localStorage.getItem('player_id');
                 if (!playerId) {
-                    appendDebug('Kein playerId gefunden in localStorage.');
+                    appendDebug('Kein playerId gefunden.');
                     return;
                 }
 
@@ -515,7 +495,7 @@
                         .single();
 
                     if (error) {
-                        appendDebug(`Fehler beim Abrufen des Status: ${error.message} (Status: ${error.status})`);
+                        appendDebug(`Fehler beim Abrufen des Status: ${error.message}`);
                         return;
                     }
                     appendDebug(`Aktueller Status: ${data.status}`);
@@ -528,11 +508,7 @@
                 }
             }
 
-            // Status-Polling alle 5 Sekunden starten, wenn playerId vorhanden
-            const playerId = localStorage.getItem('player_id');
-            if (playerId) {
-                setInterval(checkPlayerStatus, 5000);
-            }
+            setInterval(checkPlayerStatus, 5000);
 
             // Bestätigungsbutton auf prePage
             document.getElementById('acknowledgeBtn').addEventListener('click', () => {
