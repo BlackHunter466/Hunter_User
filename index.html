@@ -145,25 +145,51 @@
             border-color: #ff9999;
             box-shadow: 0 10px 30px rgba(255, 102, 102, 0.5);
             padding: 3rem;
+            position: relative;
+            overflow: hidden;
         }
         #prePage h1 {
             font-size: 2.5rem;
             text-shadow: 0 0 10px #ffffff, 0 0 20px #ff6666;
             animation: bounce 0.8s ease-in-out infinite;
+            position: relative;
+            z-index: 2;
         }
         #prePage p {
             font-size: 1.2rem;
             margin: 1rem 0;
             text-shadow: 0 0 5px #ffffff;
+            position: relative;
+            z-index: 2;
         }
         #prePage button {
             background: linear-gradient(90deg, #ff3333, #ff6666);
             padding: 1rem;
             font-size: 1.2rem;
+            position: relative;
+            z-index: 2;
         }
         #prePage button:hover {
             background: linear-gradient(90deg, #ff6666, #ff9999);
             transform: scale(1.1);
+        }
+        .arrow-animation {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 40px solid #ffffff;
+            animation: arrowReveal 1.5s ease-out forwards;
+            z-index: 1;
+        }
+        @keyframes arrowReveal {
+            0% { width: 0; opacity: 0; }
+            50% { width: 100px; opacity: 0.7; }
+            100% { width: 100px; opacity: 1; transform: translateX(-50%) translateY(20px); }
         }
         #alarmPopup {
             display: none;
@@ -256,6 +282,7 @@
     </div>
 
     <div id="prePage" class="card" style="display:none">
+        <div class="arrow-animation"></div>
         <h1>ALARM! ZUR AUSRÜSTUNG!</h1>
         <p>Agent, melden Sie sich sofort zur Equipmentausgabe! Es geht los!</p>
         <button id="acknowledgeBtn">Bestätigen</button>
@@ -322,7 +349,7 @@
                 return;
             }
 
-            // Formular absenden
+            // Formular absenden mit Prüfung auf doppelte Anmeldung
             document.getElementById('playerForm').addEventListener('submit', async (ev) => {
                 ev.preventDefault();
                 debugDiv.textContent = '';
@@ -336,16 +363,33 @@
                     return;
                 }
 
-                const payload = {
-                    Nickname: nicknameInput.value.trim(),
-                    haender: haenderInput.value,
-                    Gender: genderInput.value,
-                    is_ready: false,
-                    created_at: new Date().toISOString(),
-                    status: 'logged in'
-                };
-
+                // Prüfe auf doppelte Anmeldung basierend auf Nickname
                 try {
+                    const { data: existingPlayers, error: checkError } = await supabase
+                        .from(TABLE_NAME)
+                        .select('id')
+                        .eq('Nickname', nicknameInput.value.trim());
+
+                    if (checkError) {
+                        appendDebug(`Fehler beim Prüfen auf doppelte Anmeldung: ${checkError.message}`);
+                        showMessage('Fehler beim Prüfen der Anmeldung.', 'error');
+                        return;
+                    }
+
+                    if (existingPlayers && existingPlayers.length > 0) {
+                        showMessage('Dieser Deckname ist bereits registriert. Bitte wähle einen anderen.', 'error');
+                        return;
+                    }
+
+                    const payload = {
+                        Nickname: nicknameInput.value.trim(),
+                        haender: haenderInput.value,
+                        Gender: genderInput.value,
+                        is_ready: false,
+                        created_at: new Date().toISOString(),
+                        status: 'logged in'
+                    };
+
                     const { data, error } = await supabase
                         .from(TABLE_NAME)
                         .insert([payload])
@@ -388,108 +432,4 @@
                             .eq('id', playerId);
 
                         if (error) {
-                            appendDebug('Fehler beim Setzen von is_ready/status: ' + error.message);
-                        } else {
-                            appendDebug(`is_ready und status=waiting für Spieler ${playerId} gesetzt.`);
-                            pages.confirmationPage.style.display = 'none';
-                            pages.waitingPage.style.display = 'block';
-                        }
-                    } catch (err) {
-                        appendDebug('Update-Catch: ' + err.message);
-                    }
-                }
-            });
-
-            // Warteschlange aktualisieren mit Polling
-            proceedBtn.addEventListener('click', async () => {
-                pages.confirmationPage.style.display = 'none';
-                pages.waitingPage.style.display = 'block';
-                const playerId = localStorage.getItem('player_id');
-
-                async function updateQueue() {
-                    try {
-                        const { data: allWaiting, error } = await supabase
-                            .from('Players')
-                            .select('id, created_at')
-                            .eq('is_ready', true)
-                            .order('created_at');
-
-                        if (error) {
-                            appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message} (Details: ${JSON.stringify(error)})`);
-                            queuePos.textContent = 'Fehler beim Laden';
-                            return;
-                        }
-                        if (!allWaiting || allWaiting.length === 0) {
-                            appendDebug('Keine wartenden Spieler gefunden.');
-                            queuePos.textContent = '1 (keine anderen)';
-                            return;
-                        }
-
-                        const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
-                        queuePos.textContent = idx >= 0 ? idx + 1 : allWaiting.length + 1;
-                        document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${idx >= 0 ? idx + 1 : 'Nicht in Warteschlange'}`;
-                    } catch (err) {
-                        appendDebug(`Queue-Update-Fehler: ${err.message}`);
-                        queuePos.textContent = 'Fehler aufgetreten';
-                    }
-                }
-
-                // Initiales Update
-                await updateQueue();
-
-                // Polling alle 5 Sekunden
-                const pollingInterval = setInterval(updateQueue, 5000);
-
-                // Beende Polling, wenn die Seite gewechselt wird
-                pages.waitingPage.addEventListener('transitionend', () => {
-                    if (pages.waitingPage.style.display === 'none') {
-                        clearInterval(pollingInterval);
-                    }
-                });
-            });
-
-            // Status-Überwachung mit Polling
-            async function checkPlayerStatus() {
-                const playerId = localStorage.getItem('player_id');
-                if (!playerId) {
-                    appendDebug('Kein playerId gefunden in localStorage.');
-                    return;
-                }
-
-                try {
-                    const { data, error } = await supabase
-                        .from(TABLE_NAME)
-                        .select('status')
-                        .eq('id', playerId)
-                        .single();
-
-                    if (error) {
-                        appendDebug(`Fehler beim Abrufen des Status: ${error.message}`);
-                        return;
-                    }
-                    appendDebug(`Aktueller Status: ${data.status}`);
-                    if (data.status === 'pre') {
-                        pages.waitingPage.style.display = 'none';
-                        pages.prePage.style.display = 'block';
-                        alarmPopup.style.display = 'block';
-                    }
-                } catch (err) {
-                    appendDebug(`Status-Check-Fehler: ${err.message}`);
-                }
-            }
-
-            // Status-Polling alle 5 Sekunden starten, wenn playerId vorhanden
-            const playerId = localStorage.getItem('player_id');
-            if (playerId) {
-                setInterval(checkPlayerStatus, 5000);
-            }
-
-            // Bestätigungsbutton auf prePage
-            document.getElementById('acknowledgeBtn').addEventListener('click', () => {
-                pages.prePage.style.display = 'none';
-                alarmPopup.style.display = 'none';
-            });
-        });
-    </script>
-</body>
-</html>
+                            appendDebug('Fehler beim Setzen von is_ready/status: '
