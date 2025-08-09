@@ -3,269 +3,209 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Agenten—DB (debuggable)</title>
+<title>Agenten—DB (stabil)</title>
 <style>
-  body{font-family:Courier,monospace;background:#000;color:#00ff99;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-  .card{background:rgba(0,0,0,.85);border:2px solid #00ff99;padding:2rem;border-radius:8px;max-width:520px;width:100%;box-shadow:0 0 15px #00ff99;text-align:center}
-  input,select,button{width:100%;padding:.7rem;margin-top:.3rem;border-radius:4px;border:1px solid #00ff99;background:#111;color:#00ff99}
-  small{color:#0ff;font-size:.8rem;display:block;margin-top:.2rem;text-align:left}
-  .error{color:#ff6666;font-weight:bold;margin-top:1rem}
-  .success{color:#00ff99;font-weight:bold;margin-top:1rem}
-  #debug{margin-top:1rem;text-align:left;color:#ccc;font-size:.8rem;white-space:pre-wrap;max-height:140px;overflow:auto;background:#071217;padding:.5rem;border-radius:6px;border:1px dashed #003}
+  body {
+    font-family: Courier, monospace;
+    background: #000;
+    color: #00ff99;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+  }
+  .card {
+    background: rgba(0,0,0,.85);
+    border: 2px solid #00ff99;
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 0 15px #00ff99;
+    text-align: center;
+    animation: fadeIn 0.6s ease-out;
+  }
+  input, select, button {
+    width: 100%;
+    padding: .7rem;
+    margin-top: .3rem;
+    border-radius: 4px;
+    border: 1px solid #00ff99;
+    background: #111;
+    color: #00ff99;
+  }
+  button:disabled { opacity: 0.5; }
+  small {
+    color: #0ff;
+    font-size: .8rem;
+    display: block;
+    margin-top: .2rem;
+    text-align: left;
+  }
+  .error { color: #ff6666; font-weight: bold; margin-top: 1rem; }
+  .success { color: #00ff99; font-weight: bold; margin-top: 1rem; }
+  #debug {
+    margin-top: 1rem;
+    text-align: left;
+    color: #ccc;
+    font-size: .8rem;
+    white-space: pre-wrap;
+    max-height: 140px;
+    overflow: auto;
+    background: #071217;
+    padding: .5rem;
+    border-radius: 6px;
+    border: 1px dashed #003;
+  }
+  @keyframes fadeIn { from { opacity:0; transform:scale(0.98);} to {opacity:1; transform:scale(1);} }
+  .loader {
+    border: 3px solid #222;
+    border-top: 3px solid #00ff99;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-left: 6px;
+  }
+  @keyframes spin { 100% { transform: rotate(360deg);} }
 </style>
 </head>
 <body>
-  <div id="formPage" class="card">
-    <h1>Agenten-Datenbank</h1>
-    <form id="playerForm">
-      <label for="nickname">Deckname</label>
-      <input id="nickname" name="Nickname" required placeholder="Codename eingeben" />
-      <small>Bitte keinen echten Namen verwenden!</small>
+<div id="formPage" class="card">
+  <h1>Agenten-Datenbank</h1>
+  <form id="playerForm">
+    <label for="nickname">Deckname</label>
+    <input id="nickname" name="Nickname" required placeholder="Codename eingeben" />
+    <small>Bitte keinen echten Namen verwenden!</small>
 
-      <label for="haender">Händigkeit</label>
-      <select id="haender" name="haender" required>
-        <option value="links">Links</option>
-        <option value="rechts">Rechts</option>
-      </select>
+    <label for="haender">Händigkeit</label>
+    <select id="haender" name="haender" required>
+      <option value="links">Links</option>
+      <option value="rechts">Rechts</option>
+    </select>
 
-      <label for="gender">Geschlecht</label>
-      <select id="gender" name="Gender" required>
-        <option value="m">Männlich</option>
-        <option value="w">Weiblich</option>
-        <option value="d">Divers</option>
-      </select>
+    <label for="gender">Geschlecht</label>
+    <select id="gender" name="Gender" required>
+      <option value="m">Männlich</option>
+      <option value="w">Weiblich</option>
+      <option value="d">Divers</option>
+    </select>
 
-      <button type="submit">Profil sichern</button>
-    </form>
+    <button type="submit">Profil sichern</button>
+  </form>
+  <div id="message" aria-live="polite"></div>
+  <div id="debug" style="display:none;"></div>
+</div>
 
-    <div id="message" aria-live="polite"></div>
-    <div id="debug" style="display:none;"></div>
-  </div>
+<div id="confirmationPage" class="card" style="display:none">
+  <h1>Agentenprofil gespeichert</h1>
+  <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
+  <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen</label>
+  <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
+  <div id="confMessage"></div>
+</div>
 
-  <div id="confirmationPage" class="card" style="display:none">
-    <h1>Agentenprofil gespeichert</h1>
-    <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
-    <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen</label>
-    <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
-    <div id="confMessage"></div>
-  </div>
+<div id="waitingPage" class="card" style="display:none">
+  <h1>Einsatzwarteschlange</h1>
+  <p>Bitte warten<span class="loader"></span></p>
+  <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
+  <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
+</div>
 
-  <div id="waitingPage" class="card" style="display:none">
-    <h1>Einsatzwarteschlange</h1>
-    <p>Bitte warten...</p>
-    <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
-    <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
-  </div>
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+  const TABLE_CANDIDATES = ['players','Players'];
 
-  <!-- Supabase SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-  <script>
-  (function(){
-    // ----------------- CONFIG -----------------
-    const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
-    const TABLE_CANDIDATES = ['players','Players']; // probiere beide
-    // ------------------------------------------
+  const messageDiv = document.getElementById('message');
+  const debugDiv = document.getElementById('debug');
+  const appendDebug = txt => {
+    console.log(txt);
+    debugDiv.style.display = '';
+    debugDiv.textContent += (debugDiv.textContent ? '\n' : '') + txt;
+  };
+  const showMessage = (text, kind='') => {
+    messageDiv.textContent = text;
+    messageDiv.className = kind;
+  };
 
-    const messageDiv = document.getElementById('message');
-    const debugDiv = document.getElementById('debug');
-    function showMessage(text, kind='') {
-      messageDiv.textContent = text;
-      messageDiv.className = kind;
+  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+    showMessage('Fatal: Supabase SDK nicht gefunden oder inkompatibel.', 'error');
+    appendDebug('SDK missing: window.supabase.createClient nicht verfügbar.');
+    return;
+  }
+  const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  appendDebug('Supabase initialisiert.');
+
+  let resolvedTable = null;
+  async function detectTable() {
+    appendDebug('Prüfe Tabellen...');
+    for (const t of TABLE_CANDIDATES) {
+      const { error } = await supabase.from(t).select('id').limit(1);
+      if (!error) return t;
     }
-    function appendDebug(txt) {
-      console.log(txt);
-      debugDiv.style.display = '';
-      debugDiv.textContent = (debugDiv.textContent ? debugDiv.textContent + '\n' : '') + txt;
+    return null;
+  }
+
+  document.getElementById('playerForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    debugDiv.textContent = '';
+
+    if (!resolvedTable) {
+      resolvedTable = await detectTable();
+      if (!resolvedTable) {
+        showMessage('Keine passende Tabelle gefunden.', 'error');
+        return;
+      }
     }
 
-    // safe init: suche createClient
-    function getCreateClientFn() {
-      if (window.supabase && typeof window.supabase.createClient === 'function') return window.supabase.createClient;
-      if (window.Supabase && typeof window.Supabase.createClient === 'function') return window.Supabase.createClient;
-      return null;
-    }
+    const payload = {
+      Nickname: nickname.value.trim(),
+      haender: haender.value,
+      Gender: gender.value,
+      is_ready: false
+    };
 
-    const createClientFn = getCreateClientFn();
-    if (!createClientFn) {
-      showMessage('Fatal: Supabase SDK nicht gefunden oder inkompatibel. Prüfe das <script>-Tag.', 'error');
-      appendDebug('SDK missing: window.supabase or window.Supabase has no createClient');
+    const { data, error } = await supabase.from(resolvedTable).insert([payload]).select('id,created_at').single();
+    if (error) {
+      showMessage('Fehler: ' + error.message, 'error');
       return;
     }
-    const supabase = createClientFn(supabaseUrl, supabaseKey);
-    appendDebug('Supabase SDK initialisiert.');
+    localStorage.setItem('player_id', data.id);
+    formPage.style.display = 'none';
+    confirmationPage.style.display = 'block';
+  });
 
-    // Tabelle erkennen (players / Players)
-    let resolvedTable = null;
-    async function detectTable() {
-      appendDebug('Suche nach existierender Tabelle unter Kandidaten: ' + JSON.stringify(TABLE_CANDIDATES));
-      for (const t of TABLE_CANDIDATES) {
-        try {
-          const { data, error } = await supabase.from(t).select('id').limit(1);
-          if (!error) {
-            appendDebug('Tabelle gefunden: ' + t);
-            return t;
-          } else {
-            appendDebug('Test auf Tabelle "' + t + '" ergab Fehler: ' + JSON.stringify(error));
-            // falls error.message enthält "Could not find the table" -> weiter
-          }
-        } catch (err) {
-          appendDebug('Exception beim Testen von Tabelle "'+t+'": ' + err.message);
-        }
-      }
-      return null;
+  securityConfirm.addEventListener('change', () => {
+    proceedBtn.disabled = !securityConfirm.checked;
+  });
+
+  proceedBtn.addEventListener('click', async () => {
+    confirmationPage.style.display = 'none';
+    waitingPage.style.display = 'block';
+    resolvedTable = resolvedTable || await detectTable();
+    const playerId = localStorage.getItem('player_id');
+
+    async function updateQueue() {
+      const { data: allWaiting } = await supabase
+        .from(resolvedTable)
+        .select('id, created_at')
+        .eq('is_ready', false)
+        .order('created_at');
+      const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
+      queuePos.textContent = idx >= 0 ? idx + 1 : allWaiting.length + 1;
+      waitingDebug.textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${idx}`;
     }
 
-    // öffentliche Referenzen
-    const formPage = document.getElementById('formPage');
-    const confirmationPage = document.getElementById('confirmationPage');
-    const waitingPage = document.getElementById('waitingPage');
-    const proceedBtn = document.getElementById('proceedBtn');
-    const securityConfirm = document.getElementById('securityConfirm');
-    const queuePosSpan = document.getElementById('queuePos');
-    const waitingDebug = document.getElementById('waitingDebug');
-
-    // Formular submit
-    document.getElementById('playerForm').addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      showMessage('', '');
-      debugDiv.textContent = '';
-
-      // detect table if not done
-      if (!resolvedTable) {
-        resolvedTable = await detectTable();
-        if (!resolvedTable) {
-          showMessage('Keine passende Tabelle gefunden (players/Players). Prüfe DB.', 'error');
-          appendDebug('Keine Tabelle erkannt. Abbruch.');
-          return;
-        }
-      }
-      appendDebug('Benutze Tabelle: ' + resolvedTable);
-
-      const nickname = document.getElementById('nickname').value.trim();
-      const haender = document.getElementById('haender').value;
-      const gender = document.getElementById('gender').value;
-      if (!nickname) {
-        showMessage('⚠ Bitte Decknamen eingeben.', 'error');
-        return;
-      }
-
-      // Insert attempt with debug
-      appendDebug('Versuche Insert in "' + resolvedTable + '" ...');
-      try {
-        const payload = { Nickname: nickname, haender: haender, Gender: gender, is_ready: false };
-        appendDebug('Payload: ' + JSON.stringify(payload));
-        const { data, error } = await supabase
-          .from(resolvedTable)
-          .insert([payload])
-          .select('id, created_at')
-          .single();
-
-        if (error) {
-          appendDebug('Insert Fehler: ' + JSON.stringify(error));
-          // Spezialfall: row level security
-          if (error.message && error.message.toLowerCase().includes('row-level')) {
-            showMessage('Fehler: RLS blockiert den Insert. Entweder RLS abschalten oder passende Policy anlegen.', 'error');
-            return;
-          }
-          showMessage('Fehler beim Speichern: ' + (error.message || JSON.stringify(error)), 'error');
-          return;
-        }
-
-        if (!data) {
-          appendDebug('Insert lieferte keine data zurück.');
-          showMessage('Insert erfolgreich, aber keine ID zurückerhalten. Prüfe Tabellenschema.', 'error');
-          return;
-        }
-
-        appendDebug('Insert erfolgreich: ' + JSON.stringify(data));
-        // speichern
-        localStorage.setItem('player_id', data.id);
-        localStorage.setItem('player_created_at', data.created_at || '');
-        formPage.style.display = 'none';
-        confirmationPage.style.display = 'block';
-        showMessage('Profil gespeichert. ID: ' + data.id, 'success');
-
-      } catch (err) {
-        appendDebug('Exception beim Insert: ' + err.message);
-        showMessage('Unerwarteter Fehler: ' + err.message, 'error');
-      }
-    });
-
-    // enable proceed button via checkbox
-    securityConfirm.addEventListener('change', () => {
-      proceedBtn.disabled = !securityConfirm.checked;
-    });
-
-    // position berechnen und anzeigen
-    proceedBtn.addEventListener('click', async () => {
-      confirmationPage.style.display = 'none';
-      waitingPage.style.display = 'block';
-      waitingDebug.textContent = '';
-
-      const playerId = localStorage.getItem('player_id');
-      if (!playerId) {
-        queuePosSpan.textContent = 'ID nicht gefunden';
-        return;
-      }
-      if (!resolvedTable) {
-        resolvedTable = await detectTable();
-        if (!resolvedTable) {
-          queuePosSpan.textContent = 'Keine Tabelle gefunden';
-          return;
-        }
-      }
-
-      appendDebug('Berechne Position für ID=' + playerId + ' in Tabelle ' + resolvedTable);
-
-      try {
-        // hole alle wartenden Einträge (is_ready=false)
-        // dann berechne index der eigenen ID — so umgehen wir Datums- oder Typprobleme
-        const { data: allWaiting, error: waitErr } = await supabase
-          .from(resolvedTable)
-          .select('id, created_at')
-          .eq('is_ready', false)
-          .order('created_at', { ascending: true }); // falls created_at existiert, sinnvoll
-
-        if (waitErr) {
-          appendDebug('Fehler beim Laden der Warteschlange: ' + JSON.stringify(waitErr));
-          // Falls SELECT wegen RLS blockiert -> hilfreiche Meldung
-          if (waitErr.message && waitErr.message.toLowerCase().includes('row-level')) {
-            queuePosSpan.textContent = 'RLS blockiert SELECT (Warteschlange).';
-            return;
-          }
-          queuePosSpan.textContent = 'Fehler beim Laden';
-          return;
-        }
-
-        appendDebug('Warteliste geladen: ' + (allWaiting ? allWaiting.length : 'null'));
-
-        if (!Array.isArray(allWaiting)) {
-          queuePosSpan.textContent = 'Keine Daten';
-          return;
-        }
-
-        // finde Index
-        const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
-        let position;
-        if (idx >= 0) position = idx + 1;
-        else {
-          // Falls die eigene ID noch nicht in der Liste ist (seltsamer Fall), setzen wir position = length+1
-          position = allWaiting.length + 1;
-        }
-
-        queuePosSpan.textContent = position;
-        waitingDebug.textContent = 'Debug: Wartende Spieler: ' + allWaiting.length + '  (Eigenes Index:' + idx + ')';
-
-      } catch (err) {
-        appendDebug('Exception beim Berechnen der Position: ' + err.message);
-        queuePosSpan.textContent = 'Fehler beim Berechnen';
-      }
-    });
-
-    // kleiner Hinweis zur Fehlersuche (nur einmal)
-    appendDebug('Ready. Öffne die DevTools (Console) für detaillierte Logs.');
-  })();
-  </script>
+    updateQueue();
+    setInterval(updateQueue, 5000); // alle 5s aktualisieren
+  });
+});
+</script>
 </body>
 </html>
