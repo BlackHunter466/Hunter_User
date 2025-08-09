@@ -152,6 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return null;
   }
 
+  // Form absenden
   document.getElementById('playerForm').addEventListener('submit', async ev => {
     ev.preventDefault();
     debugDiv.textContent = '';
@@ -168,23 +169,49 @@ document.addEventListener('DOMContentLoaded', async () => {
       Nickname: nickname.value.trim(),
       haender: haender.value,
       Gender: gender.value,
-      is_ready: false
+      is_ready: false, // bleibt false bis Sicherheitsbestätigung
+      created_at: new Date().toISOString()
     };
 
-    const { data, error } = await supabase.from(resolvedTable).insert([payload]).select('id,created_at').single();
+    const { data, error } = await supabase
+      .from(resolvedTable)
+      .insert([payload])
+      .select('id,created_at')
+      .single();
+
     if (error) {
       showMessage('Fehler: ' + error.message, 'error');
       return;
     }
+
     localStorage.setItem('player_id', data.id);
     formPage.style.display = 'none';
     confirmationPage.style.display = 'block';
   });
 
-  securityConfirm.addEventListener('change', () => {
+  // Sicherheits-Checkbox
+  securityConfirm.addEventListener('change', async () => {
     proceedBtn.disabled = !securityConfirm.checked;
+
+    // Falls angehakt, is_ready auf true setzen
+    if (securityConfirm.checked) {
+      const playerId = localStorage.getItem('player_id');
+      if (playerId && resolvedTable) {
+        const { error } = await supabase
+          .from(resolvedTable)
+          .update({ is_ready: true })
+          .eq('id', playerId);
+
+        if (error) {
+          appendDebug('Fehler beim Setzen von is_ready: ' + error.message);
+        } else {
+          appendDebug('is_ready für Spieler ' + playerId + ' gesetzt.');
+        }
+      }
+    }
   });
 
+  // In die Warteschlange
   proceedBtn.addEventListener('click', async () => {
     confirmationPage.style.display = 'none';
     waitingPage.style.display = 'block';
@@ -195,15 +222,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { data: allWaiting } = await supabase
         .from(resolvedTable)
         .select('id, created_at')
-        .eq('is_ready', false)
+        .eq('is_ready', true) // nur die, die bereit sind
         .order('created_at');
+
       const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
       queuePos.textContent = idx >= 0 ? idx + 1 : allWaiting.length + 1;
       waitingDebug.textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${idx}`;
     }
 
     updateQueue();
-    setInterval(updateQueue, 5000); // alle 5s aktualisieren
+    setInterval(updateQueue, 5000);
   });
 });
 </script>
