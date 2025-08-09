@@ -57,25 +57,32 @@
             box-shadow: 0 0 10px rgba(51, 255, 187, 0.5);
         }
         button {
-            background: linear-gradient(90deg, #00cc66, #00ff99);
+            background: linear-gradient(90deg, #006633, #009966); /* Dunklerer Gradient */
             border: none;
             cursor: pointer;
             font-weight: bold;
+            color: #ffffff; /* Weißer Text */
         }
         button:hover {
-            background: linear-gradient(90deg, #00ff99, #33ffbb);
+            background: linear-gradient(90deg, #008040, #00cc66);
             transform: scale(1.05);
         }
         button:disabled {
-            background: linear-gradient(90deg, #006633, #009966);
+            background: linear-gradient(90deg, #003d1a, #005f33);
             opacity: 0.6;
             transform: scale(1);
             cursor: not-allowed;
+            color: #cccccc; /* Helliger Text für deaktivierte Buttons */
         }
-        small {
+        label {
+            display: block;
+            text-align: left;
+            margin-top: 0.5rem;
+        }
+        .note {
             color: #33ffbb;
-            font-size: 0.9rem;
-            margin-top: 0.3rem;
+            font-size: 1rem;
+            margin-top: 0.5rem;
             text-align: left;
             opacity: 0.9;
         }
@@ -212,7 +219,7 @@
         <form id="playerForm">
             <label for="nickname">Deckname</label>
             <input id="nickname" name="Nickname" required placeholder="Codename eingeben" />
-            <small>Bitte keinen echten Namen verwenden!</small>
+            <p class="note">Bitte keinen echten Namen verwenden!</p>
 
             <label for="haender">Händigkeit</label>
             <select id="haender" name="haender" required>
@@ -261,7 +268,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+            const supabaseKey = 'DEIN_NEUER_ANON_KEY_HIER'; // Ersetze mit deinem aktuellen Schlüssel
             const TABLE_NAME = 'Players';
 
             const messageDiv = document.getElementById('message');
@@ -283,6 +290,7 @@
                 prePage: document.getElementById('prePage')
             };
             const alarmPopup = document.getElementById('alarmPopup');
+            const queuePos = document.getElementById('queuePos');
 
             if (!window.supabase || typeof window.supabase.createClient !== 'function') {
                 showMessage('Fatal: Supabase SDK nicht gefunden oder inkompatibel.', 'error');
@@ -401,41 +409,60 @@
                 async function updateQueue() {
                     try {
                         const { data: allWaiting, error } = await supabase
-                            .from(TABLE_NAME)
+                            .from('Players')
                             .select('id, created_at')
                             .eq('is_ready', true)
                             .order('created_at');
 
                         if (error) {
-                            appendDebug('Fehler beim Abrufen der Warteschlange: ' + error.message);
+                            appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message} (Details: ${JSON.stringify(error)})`);
+                            queuePos.textContent = 'Fehler beim Laden';
+                            return;
+                        }
+                        if (!allWaiting || allWaiting.length === 0) {
+                            appendDebug('Keine wartenden Spieler gefunden.');
+                            queuePos.textContent = '1 (keine anderen)';
                             return;
                         }
 
                         const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
-                        document.getElementById('queuePos').textContent = idx >= 0 ? idx + 1 : allWaiting.length + 1;
+                        queuePos.textContent = idx >= 0 ? idx + 1 : allWaiting.length + 1;
                         document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${idx >= 0 ? idx + 1 : 'Nicht in Warteschlange'}`;
                     } catch (err) {
-                        appendDebug('Queue-Update-Catch: ' + err.message);
+                        appendDebug(`Queue-Update-Fehler: ${err.message}`);
+                        queuePos.textContent = 'Fehler aufgetreten';
                     }
                 }
 
                 await updateQueue();
 
                 supabase.channel('queue-changes')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_NAME }, async () => {
-                        appendDebug('Realtime-Änderung erkannt – aktualisiere Warteschlange.');
+                    .on('postgres_changes', { 
+                        event: 'UPDATE', 
+                        schema: 'public', 
+                        table: 'Players', 
+                        filter: 'is_ready=eq.true' 
+                    }, async () => {
+                        appendDebug('Warteschlangen-Änderung erkannt – aktualisiere.');
                         await updateQueue();
                     })
                     .subscribe((status) => {
-                        appendDebug(`Subscription-Status: ${status}`);
+                        appendDebug(`Queue-Subscription-Status: ${status}`);
+                    }, (error) => {
+                        appendDebug(`Queue-Subscription-Fehler: ${error.message}`);
                     });
             });
 
             // Realtime-Überwachung für Status-Änderung zu 'pre'
             const playerId = localStorage.getItem('player_id');
             if (playerId) {
-                supabase.channel(`player-status-${playerId}`)
-                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: TABLE_NAME, filter: `id=eq.${playerId}` }, async (payload) => {
+                const channel = supabase.channel(`player-status-${playerId}`)
+                    .on('postgres_changes', { 
+                        event: 'UPDATE', 
+                        schema: 'public', 
+                        table: 'Players', 
+                        filter: `id=eq.${playerId}` 
+                    }, async (payload) => {
                         appendDebug(`Status-Änderung erkannt: ${payload.new.status}`);
                         if (payload.new.status === 'pre') {
                             pages.waitingPage.style.display = 'none';
@@ -443,9 +470,16 @@
                             alarmPopup.style.display = 'block';
                         }
                     })
+                    .on('system', { event: 'connection_state' }, (payload) => {
+                        appendDebug(`Verbindungsstatus: ${payload.state}`);
+                    })
                     .subscribe((status) => {
-                        appendDebug(`Status-Subscription-Status: ${status}`);
+                        appendDebug(`Subscription-Status für ${playerId}: ${status}`);
+                    }, (error) => {
+                        appendDebug(`Subscription-Fehler: ${error.message}`);
                     });
+            } else {
+                appendDebug('Kein playerId gefunden in localStorage.');
             }
 
             // Bestätigungsbutton auf prePage
