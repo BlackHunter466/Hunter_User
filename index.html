@@ -182,14 +182,15 @@
             height: 0;
             border-left: 20px solid transparent;
             border-right: 20px solid transparent;
-            border-bottom: 40px solid #ffffff;
+            border-bottom: 40px solid #ff0000; /* Rot */
             animation: arrowReveal 1.5s ease-out forwards;
             z-index: 1;
         }
         @keyframes arrowReveal {
             0% { width: 0; opacity: 0; }
-            50% { width: 100px; opacity: 0.7; }
-            100% { width: 100px; opacity: 1; transform: translateX(-50%) translateY(20px); }
+            33% { border-bottom-color: #0000ff; width: 100px; opacity: 0.7; } /* Blau */
+            66% { border-bottom-color: #00ff00; width: 100px; opacity: 0.9; } /* Grün */
+            100% { border-bottom-color: #ff0000; width: 100px; opacity: 1; transform: translateX(-50%) translateY(20px); } /* Zurück zu Rot */
         }
         #alarmPopup {
             display: none;
@@ -324,21 +325,31 @@
                 appendDebug('SDK missing: window.supabase.createClient nicht verfügbar.');
                 return;
             }
-            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-            appendDebug('Supabase initialisiert.');
+
+            let supabase;
+            try {
+                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                appendDebug('Supabase-Client erfolgreich initialisiert.');
+            } catch (err) {
+                showMessage('Fehler bei der Initialisierung von Supabase: ' + err.message, 'error');
+                appendDebug('Initialisierungsfehler: ' + err.message);
+                return;
+            }
 
             async function checkTable() {
                 appendDebug(`Prüfe Tabelle "${TABLE_NAME}"...`);
                 try {
                     const { data, error } = await supabase.from(TABLE_NAME).select('id').limit(1);
                     if (error) {
-                        appendDebug(`Fehler bei Tabelle "${TABLE_NAME}": ${error.message} (Details: ${JSON.stringify(error)})`);
+                        appendDebug(`Fehler bei Tabelle "${TABLE_NAME}": ${error.message} (Status: ${error.status}, Details: ${JSON.stringify(error)})`);
+                        showMessage(`Tabelle "${TABLE_NAME}" nicht zugänglich: ${error.message}`, 'error');
                         return false;
                     }
-                    appendDebug(`Tabelle "${TABLE_NAME}" gefunden und zugänglich.`);
+                    appendDebug(`Tabelle "${TABLE_NAME}" gefunden und zugänglich. Daten: ${JSON.stringify(data)}`);
                     return true;
                 } catch (err) {
                     appendDebug(`Unerwarteter Fehler bei Tabellenprüfung: ${err.message}`);
+                    showMessage('Unerwarteter Fehler bei der Tabellenprüfung.', 'error');
                     return false;
                 }
             }
@@ -371,7 +382,7 @@
                         .eq('Nickname', nicknameInput.value.trim());
 
                     if (checkError) {
-                        appendDebug(`Fehler beim Prüfen auf doppelte Anmeldung: ${checkError.message}`);
+                        appendDebug(`Fehler beim Prüfen auf doppelte Anmeldung: ${checkError.message} (Status: ${checkError.status})`);
                         showMessage('Fehler beim Prüfen der Anmeldung.', 'error');
                         return;
                     }
@@ -397,8 +408,8 @@
                         .single();
 
                     if (error) {
+                        appendDebug(`Fehler beim Speichern: ${error.message} (Status: ${error.status}, Details: ${JSON.stringify(error)})`);
                         showMessage('Fehler beim Speichern: ' + error.message, 'error');
-                        appendDebug('Insert-Fehler: ' + JSON.stringify(error));
                         return;
                     }
 
@@ -407,8 +418,8 @@
                     pages.formPage.style.display = 'none';
                     pages.confirmationPage.style.display = 'block';
                 } catch (err) {
+                    appendDebug(`Unerwarteter Fehler beim Speichern: ${err.message}`);
                     showMessage('Unerwarteter Fehler beim Speichern: ' + err.message, 'error');
-                    appendDebug('Insert-Catch: ' + err.message);
                 }
             });
 
@@ -432,4 +443,114 @@
                             .eq('id', playerId);
 
                         if (error) {
-                            appendDebug('Fehler beim Setzen von is_ready/status: '
+                            appendDebug(`Fehler beim Setzen von is_ready/status: ${error.message} (Status: ${error.status})`);
+                            showMessage('Fehler beim Aktualisieren des Status: ' + error.message, 'error');
+                        } else {
+                            appendDebug(`is_ready und status=waiting für Spieler ${playerId} gesetzt.`);
+                            pages.confirmationPage.style.display = 'none';
+                            pages.waitingPage.style.display = 'block';
+                        }
+                    } catch (err) {
+                        appendDebug(`Update-Catch: ${err.message}`);
+                        showMessage('Unerwarteter Fehler beim Status-Update: ' + err.message, 'error');
+                    }
+                }
+            });
+
+            // Warteschlange aktualisieren mit Polling und erweitertem Debugging
+            proceedBtn.addEventListener('click', async () => {
+                pages.confirmationPage.style.display = 'none';
+                pages.waitingPage.style.display = 'block';
+                const playerId = localStorage.getItem('player_id');
+
+                async function updateQueue() {
+                    try {
+                        appendDebug('Starte Warteschlangen-Update...');
+                        const { data: allWaiting, error } = await supabase
+                            .from('Players')
+                            .select('id, created_at')
+                            .eq('is_ready', true)
+                            .order('created_at');
+
+                        if (error) {
+                            appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message} (Status: ${error.status}, Details: ${JSON.stringify(error)})`);
+                            queuePos.textContent = 'Fehler beim Laden';
+                            return;
+                        }
+                        appendDebug(`Abruf erfolgreich, ${allWaiting.length} Einträge gefunden.`);
+                        if (!allWaiting || allWaiting.length === 0) {
+                            appendDebug('Keine wartenden Spieler gefunden.');
+                            queuePos.textContent = '1 (keine anderen)';
+                            return;
+                        }
+
+                        const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
+                        queuePos.textContent = idx >= 0 ? idx + 1 : allWaiting.length + 1;
+                        document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${idx >= 0 ? idx + 1 : 'Nicht in Warteschlange'}`;
+                        appendDebug(`Position berechnet: ${queuePos.textContent}`);
+                    } catch (err) {
+                        appendDebug(`Queue-Update-Fehler: ${err.message}`);
+                        queuePos.textContent = 'Fehler aufgetreten';
+                    }
+                }
+
+                // Initiales Update
+                await updateQueue();
+
+                // Polling alle 5 Sekunden
+                const pollingInterval = setInterval(updateQueue, 5000);
+
+                // Beende Polling, wenn die Seite gewechselt wird
+                pages.waitingPage.addEventListener('transitionend', () => {
+                    if (pages.waitingPage.style.display === 'none') {
+                        clearInterval(pollingInterval);
+                        appendDebug('Polling für Warteschlange beendet.');
+                    }
+                });
+            });
+
+            // Status-Überwachung mit Polling
+            async function checkPlayerStatus() {
+                const playerId = localStorage.getItem('player_id');
+                if (!playerId) {
+                    appendDebug('Kein playerId gefunden in localStorage.');
+                    return;
+                }
+
+                try {
+                    const { data, error } = await supabase
+                        .from(TABLE_NAME)
+                        .select('status')
+                        .eq('id', playerId)
+                        .single();
+
+                    if (error) {
+                        appendDebug(`Fehler beim Abrufen des Status: ${error.message} (Status: ${error.status})`);
+                        return;
+                    }
+                    appendDebug(`Aktueller Status: ${data.status}`);
+                    if (data.status === 'pre') {
+                        pages.waitingPage.style.display = 'none';
+                        pages.prePage.style.display = 'block';
+                        alarmPopup.style.display = 'block';
+                    }
+                } catch (err) {
+                    appendDebug(`Status-Check-Fehler: ${err.message}`);
+                }
+            }
+
+            // Status-Polling alle 5 Sekunden starten, wenn playerId vorhanden
+            const playerId = localStorage.getItem('player_id');
+            if (playerId) {
+                setInterval(checkPlayerStatus, 5000);
+            }
+
+            // Bestätigungsbutton auf prePage
+            document.getElementById('acknowledgeBtn').addEventListener('click', () => {
+                pages.prePage.style.display = 'none';
+                alarmPopup.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
