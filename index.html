@@ -160,6 +160,41 @@
             vertical-align: middle;
         }
 
+        /* queue position highlight animation */
+        .position-up {
+            animation: positionUp 1s cubic-bezier(.2,.9,.24,1);
+            color: #ffffff;
+            text-shadow: 0 0 16px rgba(0,255,153,0.9), 0 0 36px rgba(0,255,153,0.25);
+        }
+        @keyframes positionUp {
+            0%   { transform: translateY(0) scale(1); }
+            25%  { transform: translateY(-10px) scale(1.25); }
+            50%  { transform: translateY(6px)  scale(1.08); }
+            75%  { transform: translateY(-4px)  scale(1.05); }
+            100% { transform: translateY(0)   scale(1); }
+        }
+
+        /* pop-badge (Vorgerückt!) */
+        .pop-badge {
+            display: inline-block;
+            margin-left: 10px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            color: #002214;
+            font-weight: 700;
+            padding: 6px 10px;
+            border-radius: 999px;
+            box-shadow: 0 8px 30px rgba(0,255,153,0.12);
+            transform-origin: center;
+            animation: popIn 900ms cubic-bezier(.2,.9,.2,1);
+            opacity: 0;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.3) translateY(8px); opacity: 0; }
+            50% { transform: scale(1.15) translateY(-6px); opacity: 1; }
+            80% { transform: scale(0.95) translateY(0); opacity: 1; }
+            100% { transform: scale(1) translateY(0); opacity: 0; }
+        }
+
         /* prePage card overrides (keine Pfeile, keine Buttons) */
         #prePage {
             display: none;
@@ -296,7 +331,10 @@
         <div id="waitingPage" class="card" style="display:none" role="document">
             <h1>Einsatzwarteschlange</h1>
             <p>Bitte warten Sie. Sie werden gleich aufgerufen. Bleiben Sie auf dieser Seite<span class="loader"></span></p>
-            <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
+            <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span>
+                <!-- badge wird dynamisch gezeigt -->
+                <span id="popBadgeContainer" aria-hidden="true"></span>
+            </p>
             <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
         </div>
     </main>
@@ -324,6 +362,7 @@
             const messageDiv = document.getElementById('message');
             const debugDiv = document.getElementById('debug');
             const queuePos = document.getElementById('queuePos');
+            const popBadgeContainer = document.getElementById('popBadgeContainer');
 
             const pages = {
                 formPage: document.getElementById('formPage'),
@@ -331,6 +370,8 @@
                 waitingPage: document.getElementById('waitingPage'),
                 prePage: document.getElementById('prePage')
             };
+
+            let lastKnownPosition = null; // für Aufstiegs-Detektion
 
             function appendDebug(txt) {
                 console.log(txt);
@@ -396,6 +437,29 @@
                 }
             }
 
+            // Helfer: zeige kurz Pop-Badge und Animation
+            function triggerAdvanceAnimation() {
+                // avoid stacking multiple badges
+                popBadgeContainer.innerHTML = '';
+                const badge = document.createElement('span');
+                badge.className = 'pop-badge';
+                badge.textContent = 'Vorgerückt!';
+                popBadgeContainer.appendChild(badge);
+
+                // animate queuePos with class
+                queuePos.classList.remove('position-up'); // restart
+                // force reflow to restart animation if needed
+                // eslint-disable-next-line no-unused-expressions
+                queuePos.offsetWidth;
+                queuePos.classList.add('position-up');
+
+                // remove badge after animation duration (900ms) + small buffer
+                setTimeout(() => {
+                    popBadgeContainer.innerHTML = '';
+                    queuePos.classList.remove('position-up');
+                }, 1100);
+            }
+
             // Warteschlange updaten (berechne Position anhand created_at)
             async function updateQueue(playerId) {
                 try {
@@ -415,6 +479,8 @@
                         appendDebug('Keine wartenden Spieler gefunden.');
                         queuePos.textContent = '0';
                         document.getElementById('waitingDebug').textContent = 'Wartende: 0';
+                        // reset lastKnownPosition wenn niemand wartet
+                        lastKnownPosition = null;
                         return;
                     }
 
@@ -422,6 +488,7 @@
                     if (myIndex === -1) {
                         appendDebug('Spieler nicht in Warteschlange gefunden.');
                         queuePos.textContent = 'Nicht in Warteschlange';
+                        lastKnownPosition = null;
                         return;
                     }
 
@@ -430,6 +497,16 @@
                     queuePos.textContent = `${position} (Vor dir: ${playersAhead})`;
                     document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${position}`;
                     appendDebug(`Position berechnet: ${position}`);
+
+                    // Wenn lastKnownPosition existiert und neue Position kleiner -> Aufstieg
+                    if (lastKnownPosition !== null && typeof lastKnownPosition === 'number') {
+                        if (position < lastKnownPosition) {
+                            appendDebug(`Aufstieg erkannt: ${lastKnownPosition} -> ${position}`);
+                            triggerAdvanceAnimation();
+                        }
+                    }
+                    // update lastKnownPosition
+                    lastKnownPosition = position;
                 } catch (err) {
                     appendDebug(`Queue-Update-Fehler: ${err.message}`);
                     queuePos.textContent = 'Fehler aufgetreten';
@@ -439,6 +516,9 @@
             function startQueuePolling(playerId) {
                 // playerId optional
                 if (!playerId) playerId = localStorage.getItem('player_id');
+                // reset lastKnownPosition to allow correct detect after rejoin
+                // but keep it null until first poll finishes (so no false positive)
+                // lastKnownPosition stays as-is if previously set
                 updateQueue(playerId);
                 if (queuePollingInterval) clearInterval(queuePollingInterval);
                 queuePollingInterval = setInterval(() => updateQueue(playerId), 5000);
@@ -490,6 +570,8 @@
                             break;
                         case 'waiting':
                             showPage('waitingPage');
+                            // ensure lastKnownPosition is reset so first poll initializes it
+                            lastKnownPosition = null;
                             startQueuePolling(playerId);
                             break;
                         default:
@@ -610,6 +692,8 @@
                     }
 
                     showPage('waitingPage');
+                    // reset lastKnownPosition so animation detection starts fresh
+                    lastKnownPosition = null;
                     startQueuePolling(playerId);
 
                 } catch (err) {
@@ -655,15 +739,14 @@
                             appendDebug(`Update-Catch (pre): ${err.message}`);
                         }
 
-                        // zeige pre page und stoppe lokales Polling
+                        // show pre page and stop local polling
                         showPage('prePage');
                         if (queuePollingInterval) { clearInterval(queuePollingInterval); queuePollingInterval = null; appendDebug('Polling gestoppt wegen pre'); }
 
-                        // optional: trigger ein schnelles globales Queue-Update lokal (andere Clients holen es beim nächsten Intervall)
-                        // kein weiteres Handeln nötig — andere Clients poll'n weiter und sehen die geänderte Warteschlange.
                     } else if (data.status === 'waiting') {
                         if (pages.waitingPage.style.display !== 'block') {
                             showPage('waitingPage');
+                            // preserve lastKnownPosition so we can detect movement
                             startQueuePolling(playerId);
                         }
                     } else if (data.status === 'logged in') {
