@@ -224,27 +224,25 @@
             width: 90%;
             text-align: center;
         }
-        #prePage h1 { font-size: 2rem; text-shadow: 0 0 5px #ffffff; margin-bottom: 1rem; color: var(--accent); }
-        #prePage p { font-size: 1rem; margin: 0.5rem 0; text-shadow: 0 0 2px #ffffff; color: #cfeee0; }
-
-        /* Die gewünschten Texte auf prePage in verschiedenen Größen */
+        /* Animations kept for general UI */
         .pre-big {
             font-size: 3rem;
             color: var(--accent);
             margin: 0.6rem 0;
             text-shadow: 0 6px 18px rgba(0,255,153,0.08);
+            opacity: 0;
         }
         .pre-mid {
             font-size: 1.15rem;
             color: #d6f6e8;
             margin-top: 0.6rem;
-            opacity: 0.95;
+            opacity: 0;
         }
         .pre-small {
             font-size: 0.9rem;
             color: #bfeee0;
             margin-top: 0.35rem;
-            opacity: 0.85;
+            opacity: 0;
         }
 
         /* Animations kept for general UI */
@@ -342,11 +340,11 @@
     <!-- prePage: keine Pfeile, kein Button, stattdessen Texte; positioned so header/footer don't cover it -->
     <div id="prePage" style="display:none" aria-live="polite" role="dialog" aria-label="Einsatz Startmeldung">
         <div class="card" role="document">
-            <h1>Es geht los!</h1>
-            <p class="pre-big">Viel Glück</p>
-            <p class="pre-mid">Passen Sie auf sich auf.</p>
-            <p class="pre-small">Wir hoffen, Sie kommen zurück.</p>
-            <h1>Hektagon Zentrale: Ende</h1>
+            <p class="typewriter-line pre-big">Es geht los!</p>
+            <p class="typewriter-line pre-big">Viel Glück</p>
+            <p class="typewriter-line pre-mid">Passen Sie auf sich auf.</p>
+            <p class="typewriter-line pre-small">Wir hoffen, Sie kommen zurück.</p>
+            <p id="finalLine" class="pre-big" style="opacity:0;">Hektagon Zentrale: Ende</p>
         </div>
     </div>
 
@@ -357,412 +355,155 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
-            const TABLE_NAME = 'Players';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1NzUyNTksImV4cCI6MTk5MDAxMTI1OX0.NqSDkZgiOvZTRNnllcmHPu_WOPsWEX85z6mT_eWLbPQ';
+            const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-            const messageDiv = document.getElementById('message');
-            const debugDiv = document.getElementById('debug');
+            // Deine Formular-Elemente
+            const form = document.getElementById('playerForm');
+            const message = document.getElementById('message');
+            const debug = document.getElementById('debug');
+            const confirmationPage = document.getElementById('confirmationPage');
+            const formPage = document.getElementById('formPage');
+            const proceedBtn = document.getElementById('proceedBtn');
+            const securityConfirm = document.getElementById('securityConfirm');
+            const waitingPage = document.getElementById('waitingPage');
             const queuePos = document.getElementById('queuePos');
             const popBadgeContainer = document.getElementById('popBadgeContainer');
+            const waitingDebug = document.getElementById('waitingDebug');
+            const prePage = document.getElementById('prePage');
 
-            const pages = {
-                formPage: document.getElementById('formPage'),
-                confirmationPage: document.getElementById('confirmationPage'),
-                waitingPage: document.getElementById('waitingPage'),
-                prePage: document.getElementById('prePage')
-            };
+            // Sicherheit bestätigen Button aktivieren
+            securityConfirm.addEventListener('change', () => {
+                proceedBtn.disabled = !securityConfirm.checked;
+            });
 
-            let lastKnownPosition = null; // für Aufstiegs-Detektion
+            // Formular abschicken
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                message.textContent = '';
+                debug.style.display = 'none';
 
-            function appendDebug(txt) {
-                console.log(txt);
-                debugDiv.style.display = '';
-                debugDiv.textContent += (debugDiv.textContent ? '\n' : '') + txt;
-            }
-            function showMessage(text, kind = '') {
-                messageDiv.textContent = text;
-                messageDiv.className = kind;
-            }
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData.entries());
 
-            if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-                showMessage('Fatal: Supabase SDK nicht gefunden oder inkompatibel.', 'error');
-                appendDebug('SDK missing: window.supabase.createClient nicht verfügbar.');
-                return;
-            }
-
-            let supabase;
-            try {
-                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-                appendDebug('Supabase-Client erfolgreich initialisiert.');
-            } catch (err) {
-                showMessage('Fehler bei der Initialisierung von Supabase: ' + err.message, 'error');
-                appendDebug('Initialisierungsfehler: ' + err.message);
-                return;
-            }
-
-            // Prüfe Tabelle
-            async function checkTable() {
-                appendDebug(`Prüfe Tabelle "${TABLE_NAME}"...`);
-                try {
-                    const { data, error } = await supabase.from(TABLE_NAME).select('id').limit(1);
-                    if (error) {
-                        appendDebug(`Fehler bei Tabelle "${TABLE_NAME}": ${error.message}`);
-                        showMessage(`Tabelle "${TABLE_NAME}" nicht zugänglich: ${error.message}`, 'error');
-                        return false;
-                    }
-                    appendDebug(`Tabelle "${TABLE_NAME}" gefunden und zugänglich.`);
-                    return true;
-                } catch (err) {
-                    appendDebug(`Unerwarteter Fehler bei Tabellenprüfung: ${err.message}`);
-                    showMessage('Unerwarteter Fehler bei der Tabellenprüfung.', 'error');
-                    return false;
-                }
-            }
-
-            if (!await checkTable()) return;
-
-            // Seiten anzeigen / Polling managen
-            let queuePollingInterval = null;
-            function showPage(pageName) {
-                for (const p in pages) {
-                    pages[p].style.display = (p === pageName) ? 'block' : 'none';
-                }
-                // Debug nur im Formular sichtbar
-                debugDiv.style.display = (pageName === 'formPage') ? '' : 'none';
-
-                // Stoppe Queue-Polling wenn wir nicht auf der Warteseite sind
-                if (pageName !== 'waitingPage' && queuePollingInterval) {
-                    clearInterval(queuePollingInterval);
-                    queuePollingInterval = null;
-                    appendDebug('Polling für Warteschlange beendet.');
-                }
-            }
-
-            // Helfer: zeige kurz Pop-Badge und Animation
-            function triggerAdvanceAnimation() {
-                // avoid stacking multiple badges
-                popBadgeContainer.innerHTML = '';
-                const badge = document.createElement('span');
-                badge.className = 'pop-badge';
-                badge.textContent = 'Vorgerückt!';
-                popBadgeContainer.appendChild(badge);
-
-                // animate queuePos with class
-                queuePos.classList.remove('position-up'); // restart
-                // force reflow to restart animation if needed
-                // eslint-disable-next-line no-unused-expressions
-                queuePos.offsetWidth;
-                queuePos.classList.add('position-up');
-
-                // remove badge after animation duration (900ms) + small buffer
-                setTimeout(() => {
-                    popBadgeContainer.innerHTML = '';
-                    queuePos.classList.remove('position-up');
-                }, 1100);
-            }
-
-            // Warteschlange updaten (berechne Position anhand created_at)
-            async function updateQueue(playerId) {
-                try {
-                    appendDebug('Starte Warteschlangen-Update...');
-                    const { data: allWaiting, error } = await supabase
-                        .from(TABLE_NAME)
-                        .select('id, created_at')
-                        .eq('is_ready', true)
-                        .order('created_at', { ascending: true });
-
-                    if (error) {
-                        appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message}`);
-                        queuePos.textContent = 'Fehler beim Laden';
-                        return;
-                    }
-                    if (!allWaiting || allWaiting.length === 0) {
-                        appendDebug('Keine wartenden Spieler gefunden.');
-                        queuePos.textContent = '0';
-                        document.getElementById('waitingDebug').textContent = 'Wartende: 0';
-                        // reset lastKnownPosition wenn niemand wartet
-                        lastKnownPosition = null;
-                        return;
-                    }
-
-                    const myIndex = allWaiting.findIndex(item => String(item.id) === String(playerId));
-                    if (myIndex === -1) {
-                        appendDebug('Spieler nicht in Warteschlange gefunden.');
-                        queuePos.textContent = 'Nicht in Warteschlange';
-                        lastKnownPosition = null;
-                        return;
-                    }
-
-                    const position = myIndex + 1;
-                    const playersAhead = myIndex;
-                    queuePos.textContent = `${position} (Vor dir: ${playersAhead})`;
-                    document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${position}`;
-                    appendDebug(`Position berechnet: ${position}`);
-
-                    // Wenn lastKnownPosition existiert und neue Position kleiner -> Aufstieg
-                    if (lastKnownPosition !== null && typeof lastKnownPosition === 'number') {
-                        if (position < lastKnownPosition) {
-                            appendDebug(`Aufstieg erkannt: ${lastKnownPosition} -> ${position}`);
-                            triggerAdvanceAnimation();
-                        }
-                    }
-                    // update lastKnownPosition
-                    lastKnownPosition = position;
-                } catch (err) {
-                    appendDebug(`Queue-Update-Fehler: ${err.message}`);
-                    queuePos.textContent = 'Fehler aufgetreten';
-                }
-            }
-
-            function startQueuePolling(playerId) {
-                // playerId optional
-                if (!playerId) playerId = localStorage.getItem('player_id');
-                // reset lastKnownPosition to allow correct detect after rejoin
-                // but keep it null until first poll finishes (so no false positive)
-                // lastKnownPosition stays as-is if previously set
-                updateQueue(playerId);
-                if (queuePollingInterval) clearInterval(queuePollingInterval);
-                queuePollingInterval = setInterval(() => updateQueue(playerId), 5000);
-            }
-
-            // Beim Laden prüfen, welchen Status der Spieler hat
-            async function checkPlayerStatusOnLoad() {
-                const playerId = localStorage.getItem('player_id');
-                if (!playerId) {
-                    showPage('formPage');
-                    return;
-                }
-                try {
-                    const { data, error } = await supabase
-                        .from(TABLE_NAME)
-                        .select('status')
-                        .eq('id', playerId)
-                        .single();
-
-                    if (error || !data) {
-                        appendDebug(`Fehler beim Abrufen des Status: ${error ? error.message : 'Keine Daten'}`);
-                        showPage('formPage');
-                        return;
-                    }
-                    appendDebug(`Status beim Laden: ${data.status}`);
-
-                    if (data.status === 'pre') {
-                        // Wenn beim Laden bereits 'pre', entferne den Spieler aus der Warteschlange (is_ready = false)
-                        try {
-                            const { error: updErr } = await supabase
-                                .from(TABLE_NAME)
-                                .update({ is_ready: false })
-                                .eq('id', playerId);
-                            if (updErr) {
-                                appendDebug(`Fehler beim Entfernen aus Warteschlange (onLoad): ${updErr.message}`);
-                            } else {
-                                appendDebug('Spieler beim Laden aus Warteschlange entfernt (is_ready=false).');
-                            }
-                        } catch (err) {
-                            appendDebug(`Update-Catch (onLoad): ${err.message}`);
-                        }
-                        showPage('prePage');
-                        return;
-                    }
-
-                    switch (data.status) {
-                        case 'logged in':
-                            showPage('confirmationPage');
-                            break;
-                        case 'waiting':
-                            showPage('waitingPage');
-                            // ensure lastKnownPosition is reset so first poll initializes it
-                            lastKnownPosition = null;
-                            startQueuePolling(playerId);
-                            break;
-                        default:
-                            showPage('formPage');
-                            break;
-                    }
-                } catch (err) {
-                    appendDebug(`Fehler bei Status-Check beim Laden: ${err.message}`);
-                    showPage('formPage');
-                }
-            }
-
-            // Formular absenden -> Einfügen mit status 'logged in'
-            document.getElementById('playerForm').addEventListener('submit', async (ev) => {
-                ev.preventDefault();
-                debugDiv.textContent = '';
-                showMessage('');
-
-                const NicknameInput = document.getElementById('Nickname');
-                const haenderInput = document.getElementById('haender');
-                const GenderInput = document.getElementById('Gender');
-
-                if (NicknameInput.value.trim().length < 2) {
-                    showMessage('Deckname muss mindestens 2 Zeichen lang sein.', 'error');
+                // Check Name (zB mindestens 3 Zeichen)
+                if (!data.Nickname || data.Nickname.length < 3) {
+                    message.textContent = 'Bitte einen gültigen Decknamen mit mindestens 3 Zeichen eingeben.';
+                    message.className = 'error';
                     return;
                 }
 
                 try {
-                    // Duplikat-Prüfung
-                    const { data: existingPlayers, error: checkError } = await supabase
-                        .from(TABLE_NAME)
-                        .select('id')
-                        .eq('Nickname', NicknameInput.value.trim());
-
-                    if (checkError) {
-                        appendDebug(`Fehler beim Prüfen auf doppelte Anmeldung: ${checkError.message}`);
-                        showMessage('Fehler beim Prüfen der Anmeldung.', 'error');
-                        return;
-                    }
-                    if (existingPlayers && existingPlayers.length > 0) {
-                        showMessage('Dieser Deckname ist bereits registriert. Bitte wähle einen anderen.', 'error');
-                        return;
-                    }
-
-                    // localStorage-ID prüfen (falls vorhanden)
-                    const localPlayerId = localStorage.getItem('player_id');
-                    if (localPlayerId) {
-                        const { data: existingLocal, error: localError } = await supabase
-                            .from(TABLE_NAME)
-                            .select('id')
-                            .eq('id', localPlayerId);
-                        if (localError) appendDebug(`Fehler bei lokaler ID-Prüfung: ${localError.message}`);
-                        else if (existingLocal && existingLocal.length > 0) {
-                            showMessage('Du bist bereits angemeldet.', 'error');
-                            return;
-                        }
-                    }
-
-                    // Insert (status 'logged in')
-                    const { data, error } = await supabase
-                        .from(TABLE_NAME)
-                        .insert([{
-                            Nickname: NicknameInput.value.trim(),
-                            haender: haenderInput.value,
-                            Gender: GenderInput.value,
-                            status: 'logged in',
-                            is_ready: false,
-                            created_at: new Date().toISOString()
-                        }])
-                        .select()
-                        .single();
+                    const { data: insertData, error } = await supabase.from('agents').insert([{
+                        nickname: data.Nickname,
+                        haender: data.haender,
+                        gender: data.Gender,
+                        status: 'ready'
+                    }]);
 
                     if (error) {
-                        appendDebug(`Insert-Fehler: ${error.message}`);
-                        showMessage('Fehler beim Speichern des Profils.', 'error');
+                        message.textContent = 'Fehler beim Speichern: ' + error.message;
+                        message.className = 'error';
+                        debug.textContent = JSON.stringify(error, null, 2);
+                        debug.style.display = 'block';
                         return;
                     }
 
-                    localStorage.setItem('player_id', data.id);
-                    showMessage('Profil gespeichert. Bitte lesen und bestätigen Sie die Sicherheitsinformationen.', 'success');
-                    showPage('confirmationPage');
+                    message.textContent = 'Agentenprofil erfolgreich gespeichert.';
+                    message.className = 'success';
+
+                    formPage.style.display = 'none';
+                    confirmationPage.style.display = 'block';
 
                 } catch (err) {
-                    appendDebug(`Unbekannter Fehler beim Speichern: ${err.message}`);
-                    showMessage('Unbekannter Fehler beim Speichern.', 'error');
+                    message.textContent = 'Unbekannter Fehler: ' + err.message;
+                    message.className = 'error';
                 }
             });
 
-            // Sicherheitsseite: Checkbox & Button-Logik
-            const securityConfirmCheckbox = document.getElementById('securityConfirm');
-            const proceedBtn = document.getElementById('proceedBtn');
+            // Button Weiter zum Warten
+            proceedBtn.addEventListener('click', () => {
+                confirmationPage.style.display = 'none';
+                waitingPage.style.display = 'block';
 
-            securityConfirmCheckbox.addEventListener('change', () => {
-                proceedBtn.disabled = !securityConfirmCheckbox.checked;
+                // Start polling (nur Beispiel)
+                pollQueuePosition();
             });
 
-            proceedBtn.addEventListener('click', async () => {
-                const playerId = localStorage.getItem('player_id');
-                if (!playerId) {
-                    showMessage('Keine gültige Anmeldung gefunden. Bitte neu anmelden.', 'error');
-                    showPage('formPage');
-                    return;
-                }
-                proceedBtn.disabled = true;
-                proceedBtn.textContent = 'Speichere...';
-                try {
-                    const { error } = await supabase
-                        .from(TABLE_NAME)
-                        .update({ status: 'waiting', is_ready: true })
-                        .eq('id', playerId);
+            // Beispiel Polling Funktion für Warteschlange (hier Dummy)
+            async function pollQueuePosition() {
+                let position = 5; // Beispiel Startposition
+                let badgeShown = false;
+                const interval = setInterval(() => {
+                    if (position > 0) {
+                        position--;
+                        queuePos.textContent = position;
 
-                    if (error) {
-                        appendDebug(`Fehler beim Update auf 'waiting': ${error.message}`);
-                        showMessage('Fehler beim Aktualisieren des Status.', 'error');
-                        proceedBtn.disabled = false;
-                        proceedBtn.textContent = 'Weiter zur Einsatzwarteschlange';
-                        return;
-                    }
-
-                    showPage('waitingPage');
-                    // reset lastKnownPosition so animation detection starts fresh
-                    lastKnownPosition = null;
-                    startQueuePolling(playerId);
-
-                } catch (err) {
-                    appendDebug(`Unbekannter Fehler beim Status-Update: ${err.message}`);
-                    showMessage('Unbekannter Fehler beim Status-Update.', 'error');
-                    proceedBtn.disabled = false;
-                    proceedBtn.textContent = 'Weiter zur Einsatzwarteschlange';
-                }
-            });
-
-            // Regelmässiger Status-Check (z.B. Admin setzt pre)
-            async function checkPlayerStatus() {
-                const playerId = localStorage.getItem('player_id');
-                if (!playerId) return;
-                try {
-                    const { data, error } = await supabase
-                        .from(TABLE_NAME)
-                        .select('status')
-                        .eq('id', playerId)
-                        .single();
-
-                    if (error) {
-                        appendDebug(`Fehler beim Status-Abruf: ${error.message}`);
-                        return;
-                    }
-
-                    appendDebug(`Aktueller Status: ${data.status}`);
-                    if (data.status === 'pre') {
-                        // Wenn Admin den Status auf pre setzt, entferne Spieler aus Warteschlange (is_ready=false),
-                        // zeige prePage und stoppe Queue-Polling lokal.
-                        try {
-                            const { error: updErr } = await supabase
-                                .from(TABLE_NAME)
-                                .update({ is_ready: false })
-                                .eq('id', playerId);
-
-                            if (updErr) {
-                                appendDebug(`Fehler beim is_ready=false setzen nach pre: ${updErr.message}`);
-                            } else {
-                                appendDebug('Spieler in DB aus Warteschlange entfernt (is_ready=false) wegen pre.');
-                            }
-                        } catch (err) {
-                            appendDebug(`Update-Catch (pre): ${err.message}`);
+                        // Pop-Badge anzeigen, wenn Position < 4
+                        if (position < 4 && !badgeShown) {
+                            badgeShown = true;
+                            const badge = document.createElement('span');
+                            badge.className = 'pop-badge';
+                            badge.textContent = 'Vorgerückt!';
+                            popBadgeContainer.appendChild(badge);
+                            setTimeout(() => badge.remove(), 800);
                         }
+                    } else {
+                        clearInterval(interval);
+                        queuePos.textContent = 'Einsatz startet jetzt!';
+                        popBadgeContainer.innerHTML = '';
 
-                        // show pre page and stop local polling
-                        showPage('prePage');
-                        if (queuePollingInterval) { clearInterval(queuePollingInterval); queuePollingInterval = null; appendDebug('Polling gestoppt wegen pre'); }
-
-                    } else if (data.status === 'waiting') {
-                        if (pages.waitingPage.style.display !== 'block') {
-                            showPage('waitingPage');
-                            // preserve lastKnownPosition so we can detect movement
-                            startQueuePolling(playerId);
-                        }
-                    } else if (data.status === 'logged in') {
-                        if (pages.confirmationPage.style.display !== 'block') showPage('confirmationPage');
+                        // prePage anzeigen mit Typewriter-Effekt
+                        waitingPage.style.display = 'none';
+                        prePage.style.display = 'flex';
                     }
-                } catch (err) {
-                    appendDebug(`Status-Check-Fehler: ${err.message}`);
+                }, 2000);
+            }
+
+            // Typewriter Animation Funktion
+            async function typewriterEffect(containerId, finalLineId) {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+
+                const lines = container.querySelectorAll('.typewriter-line');
+                for (const line of lines) {
+                    line.style.opacity = '1';
+                    const fullText = line.textContent;
+                    line.textContent = '';
+                    for (let i = 0; i < fullText.length; i++) {
+                        line.textContent += fullText.charAt(i);
+                        await new Promise(r => setTimeout(r, 50));
+                    }
+                    await new Promise(r => setTimeout(r, 300));
+                }
+
+                // Final Line einblenden
+                const finalLine = document.getElementById(finalLineId);
+                if (finalLine) {
+                    finalLine.style.opacity = '0';
+                    finalLine.style.display = 'block';
+                    let opacity = 0;
+                    const fadeIn = setInterval(() => {
+                        opacity += 0.05;
+                        finalLine.style.opacity = opacity;
+                        if (opacity >= 1) clearInterval(fadeIn);
+                    }, 50);
                 }
             }
 
-            // Starte periodischen Status-Check
-            setInterval(checkPlayerStatus, 5000);
+            // Observer: wenn #prePage sichtbar wird, starte Typewriter
+            const observer = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                    if (m.target.style.display === 'flex') {
+                        if (!m.target.dataset.animated) {
+                            m.target.dataset.animated = 'true';
+                            typewriterEffect('prePage', 'finalLine');
+                        }
+                    }
+                }
+            });
+            observer.observe(prePage, { attributes: true, attributeFilter: ['style'] });
 
-            // Initiale Prüfung beim Laden
-            await checkPlayerStatusOnLoad();
         });
     </script>
 </body>
