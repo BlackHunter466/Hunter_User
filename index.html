@@ -269,7 +269,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c'; // Korrekter Schlüssel, 64 Zeichen
 
             const messageDiv = document.getElementById('message');
             const debugDiv = document.getElementById('debug');
@@ -292,7 +292,7 @@
             };
             const queuePos = document.getElementById('queuePos');
 
-            // Supabase-Initialisierung mit detailliertem Debugging
+            // Supabase-Initialisierung
             let supabase;
             try {
                 appendDebug('Initialisiere Supabase-Client...');
@@ -309,7 +309,7 @@
                 });
                 appendDebug(`Verwendeter API-Schlüssel: ${supabaseKey.substring(0, 10)}... (Länge: ${supabaseKey.length})`);
                 const { data, error } = await supabase
-                    .from(TABLE_NAME)
+                    .from('Players')
                     .select('id')
                     .limit(1)
                     .single();
@@ -343,7 +343,7 @@
                 try {
                     appendDebug('Prüfe auf doppelte Anmeldung...');
                     const { data: existingPlayers, error: checkError } = await supabase
-                        .from(TABLE_NAME)
+                        .from('Players')
                         .select('id')
                         .eq('Nickname', nicknameInput.value.trim());
 
@@ -369,7 +369,7 @@
 
                     appendDebug('Speichere neues Profil...');
                     const { data, error } = await supabase
-                        .from(TABLE_NAME)
+                        .from('Players')
                         .insert([payload])
                         .select('id, created_at, status')
                         .single();
@@ -403,4 +403,103 @@
                     }
 
                     try {
-                        appendDebug(`Aktualisiere Status
+                        appendDebug(`Aktualisiere Status für Spieler ${playerId}...`);
+                        const { error } = await supabase
+                            .from('Players')
+                            .update({ is_ready: true, status: 'waiting' })
+                            .eq('id', playerId);
+
+                        if (error) {
+                            appendDebug(`Update-Fehler: ${error.message} (Status: ${error.status})`);
+                            showMessage('Fehler beim Aktualisieren des Status.', 'error');
+                        } else {
+                            appendDebug('Status erfolgreich auf "waiting" gesetzt.');
+                            pages.confirmationPage.style.display = 'none';
+                            pages.waitingPage.style.display = 'block';
+                        }
+                    } catch (err) {
+                        appendDebug(`Update-Catch-Fehler: ${err.message} (Stack: ${err.stack})`);
+                        showMessage('Unerwarteter Fehler beim Status-Update.', 'error');
+                    }
+                }
+            });
+
+            // Warteschlange aktualisieren
+            proceedBtn.addEventListener('click', async () => {
+                pages.confirmationPage.style.display = 'none';
+                pages.waitingPage.style.display = 'block';
+                const playerId = localStorage.getItem('player_id');
+
+                async function updateQueue() {
+                    try {
+                        appendDebug('Aktualisiere Warteschlange...');
+                        const { data: allWaiting, error } = await supabase
+                            .from('Players')
+                            .select('id, created_at')
+                            .eq('is_ready', true)
+                            .order('created_at', { ascending: true });
+
+                        if (error) {
+                            appendDebug(`Warteschlange-Fehler: ${error.message} (Status: ${error.status})`);
+                            queuePos.textContent = 'Fehler beim Laden';
+                            return;
+                        }
+                        appendDebug(`Warteschlange geladen: ${JSON.stringify(allWaiting)}`);
+                        if (!allWaiting || allWaiting.length === 0) {
+                            appendDebug('Keine wartenden Spieler.');
+                            queuePos.textContent = '1';
+                            return;
+                        }
+
+                        const idx = allWaiting.findIndex(item => String(item.id) === String(playerId));
+                        queuePos.textContent = idx >= 0 ? idx + 1 : 'Nicht in Warteschlange';
+                        document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Position: ${idx + 1 || 'N/A'}`;
+                    } catch (err) {
+                        appendDebug(`Queue-Update-Fehler: ${err.message} (Stack: ${err.stack})`);
+                        queuePos.textContent = 'Fehler aufgetreten';
+                    }
+                }
+
+                await updateQueue();
+                setInterval(updateQueue, 5000);
+            });
+
+            // Status-Überwachung
+            async function checkPlayerStatus() {
+                const playerId = localStorage.getItem('player_id');
+                if (!playerId) {
+                    appendDebug('Keine playerId gefunden.');
+                    return;
+                }
+
+                try {
+                    appendDebug(`Prüfe Status für Spieler ${playerId}...`);
+                    const { data, error } = await supabase
+                        .from('Players')
+                        .select('status')
+                        .eq('id', playerId)
+                        .single();
+
+                    if (error) {
+                        appendDebug(`Status-Fehler: ${error.message} (Status: ${error.status})`);
+                        return;
+                    }
+                    appendDebug(`Aktueller Status: ${data.status}`);
+                    if (data.status === 'pre') {
+                        pages.waitingPage.style.display = 'none';
+                        pages.prePage.style.display = 'block';
+                    }
+                } catch (err) {
+                    appendDebug(`Status-Check-Fehler: ${err.message} (Stack: ${err.stack})`);
+                }
+            }
+            setInterval(checkPlayerStatus, 5000);
+
+            // Bestätigungsbutton
+            document.getElementById('acknowledgeBtn').addEventListener('click', () => {
+                pages.prePage.style.display = 'none';
+            });
+        });
+    </script>
+</body>
+</html>
