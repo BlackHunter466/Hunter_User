@@ -212,8 +212,8 @@
 </head>
 <body>
     <div id="formPage" class="card">
-        <h1>Agenten-Datenbank</h1>
-        <p class="subtitle">Agent Bitte Einsatzformular ausfüllen</p>
+        <h1>Agenten-Log in</h1>
+        <p class="subtitle">Agenten, Bereiten sie sich auf ihre Mission vor</p>
         <form id="playerForm">
             <label for="nickname">Deckname</label>
             <input id="nickname" name="Nickname" required placeholder="Codename eingeben" />
@@ -229,7 +229,7 @@
             <select id="gender" name="Gender" required>
                 <option value="m">Männlich</option>
                 <option value="w">Weiblich</option>
-                <option value="d">Divers</option>
+                <option value="d">keine Angabe</option>
             </select>
 
             <button type="submit">Profil sichern</button>
@@ -240,23 +240,23 @@
 
     <div id="confirmationPage" class="card" style="display:none">
         <h1>Agentenprofil gespeichert</h1>
-        <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
-        <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen</label>
+        <p class="success">Bitte lesen sie folgende Sicherheitsinstruktionen.</p>
+        <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen und akzeptiert</label>
         <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
         <div id="confMessage"></div>
     </div>
 
     <div id="waitingPage" class="card" style="display:none">
         <h1>Einsatzwarteschlange</h1>
-        <p>Bitte warten<span class="loader"></span></p>
+        <p>Bitte warten sie. Sie werden gleich aufgerufen. Bleiben sie auf dieser Seite<span class="loader"></span></p>
         <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
         <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
     </div>
 
     <div id="prePage" class="card" style="display:none">
         <div class="arrow-animation"></div>
-        <h1>ALARM! ZUR AUSRÜSTUNG!</h1>
-        <p>Melden Sie sich zur Equipmentausgabe.</p>
+        <h1>Es geht los!</h1>
+        <p>Melden Sie sich bei der Equipmentausgabe.</p>
         <button id="acknowledgeBtn">Bestätigen</button>
     </div>
 
