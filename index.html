@@ -224,27 +224,72 @@
             width: 90%;
             text-align: center;
         }
-        #prePage h1 { font-size: 2rem; text-shadow: 0 0 5px #ffffff; margin-bottom: 1rem; color: var(--accent); }
-        #prePage p { font-size: 1rem; margin: 0.5rem 0; text-shadow: 0 0 2px #ffffff; color: #cfeee0; }
+        #prePage h1 { 
+            font-family: 'Courier New', monospace;
+            font-size: 2rem; 
+            text-shadow: 0 0 5px #ffffff; 
+            margin-bottom: 1rem; 
+            color: var(--accent); 
+        }
+        #prePage p { 
+            font-family: 'Courier New', monospace;
+            font-size: 1rem; 
+            margin: 0.5rem 0; 
+            text-shadow: 0 0 2px #ffffff; 
+            color: #cfeee0; 
+        }
 
         /* Die gewünschten Texte auf prePage in verschiedenen Größen */
         .pre-big {
+            font-family: 'Courier New', monospace;
             font-size: 3rem;
             color: var(--accent);
             margin: 0.6rem 0;
             text-shadow: 0 6px 18px rgba(0,255,153,0.08);
         }
         .pre-mid {
+            font-family: 'Courier New', monospace;
             font-size: 1.15rem;
             color: #d6f6e8;
             margin-top: 0.6rem;
             opacity: 0.95;
         }
         .pre-small {
+            font-family: 'Courier New', monospace;
             font-size: 0.9rem;
             color: #bfeee0;
             margin-top: 0.35rem;
             opacity: 0.85;
+        }
+
+        /* Typewriter Effect */
+        .typewriter {
+            overflow: hidden; /* Ensures text stays within bounds */
+            white-space: nowrap; /* Prevents text wrapping */
+            border-right: 0.15em solid var(--accent); /* Cursor effect */
+            animation: typing 2s steps(40, end), blink-caret 0.75s step-end infinite;
+        }
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+        @keyframes blink-caret {
+            from, to { border-color: transparent; }
+            50% { border-color: var(--accent); }
+        }
+
+        /* Hektagon Zentrale: Ende Animation */
+        .final-message {
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-top: 1.5rem;
+            opacity: 0;
+            animation: fadeInFinal 2s ease-out 4s forwards; /* Startet nach 4s, dauert 2s */
+        }
+        @keyframes fadeInFinal {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
         /* Animations kept for general UI */
@@ -343,10 +388,11 @@
     <div id="prePage" style="display:none" aria-live="polite" role="dialog" aria-label="Einsatz Startmeldung">
         <div class="card" role="document">
             <h1>Es geht los!</h1>
-            <p class="pre-big">Viel Glück</p>
-            <p class="pre-mid">Passen Sie auf sich auf.</p>
-            <p class="pre-small">Wir hoffen, Sie kommen zurück.</p>
+            <p class="pre-big typewriter" id="typewriter-big">Viel Glück</p>
+            <p class="pre-mid typewriter" id="typewriter-mid">Passen Sie auf sich auf.</p>
+            <p class="pre-small typewriter" id="typewriter-small">Wir hoffen, Sie kommen zurück.</p>
             <h1>Hektagon Zentrale: Ende</h1>
+            <div class="final-message">Hektagon Zentrale: Ende</div>
         </div>
     </div>
 
@@ -427,8 +473,8 @@
                 for (const p in pages) {
                     pages[p].style.display = (p === pageName) ? 'block' : 'none';
                 }
-                // Debug nur im Formular sichtbar
-                debugDiv.style.display = (pageName === 'formPage') ? '' : 'none';
+                // Debug immer sichtbar
+                debugDiv.style.display = '';
 
                 // Stoppe Queue-Polling wenn wir nicht auf der Warteseite sind
                 if (pageName !== 'waitingPage' && queuePollingInterval) {
@@ -761,8 +807,38 @@
             // Starte periodischen Status-Check
             setInterval(checkPlayerStatus, 5000);
 
+            // Typewriter-Effekt für prePage
+            function startTypewriter() {
+                const typewriterBig = document.getElementById('typewriter-big');
+                const typewriterMid = document.getElementById('typewriter-mid');
+                const typewriterSmall = document.getElementById('typewriter-small');
+
+                if (typewriterBig && typewriterMid && typewriterSmall) {
+                    typewriterBig.style.width = '0';
+                    typewriterMid.style.width = '0';
+                    typewriterSmall.style.width = '0';
+
+                    setTimeout(() => {
+                        typewriterBig.style.width = '100%';
+                    }, 500); // Start nach 0.5s
+                    setTimeout(() => {
+                        typewriterMid.style.width = '100%';
+                    }, 3000); // Nach 3s
+                    setTimeout(() => {
+                        typewriterSmall.style.width = '100%';
+                    }, 5000); // Nach 5s
+                }
+            }
+
             // Initiale Prüfung beim Laden
             await checkPlayerStatusOnLoad();
+
+            // Typewriter-Effekt starten, wenn prePage angezeigt wird
+            document.getElementById('prePage').addEventListener('transitionend', (e) => {
+                if (e.propertyName === 'opacity' && pages.prePage.style.display === 'block') {
+                    startTypewriter();
+                }
+            });
         });
     </script>
 </body>
