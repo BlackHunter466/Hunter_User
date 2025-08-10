@@ -267,7 +267,7 @@
             overflow: hidden; /* Ensures text stays within bounds */
             white-space: nowrap; /* Prevents text wrapping */
             border-right: 0.15em solid var(--accent); /* Cursor effect */
-            animation: typing 2s steps(40, end), blink-caret 0.75s step-end infinite;
+            animation: typing 4s steps(40, end), blink-caret 0.75s step-end infinite; /* Verlängert auf 4s */
         }
         @keyframes typing {
             from { width: 0; }
@@ -285,7 +285,7 @@
             color: var(--accent);
             margin-top: 1.5rem;
             opacity: 0;
-            animation: fadeInFinal 2s ease-out 4s forwards; /* Startet nach 4s, dauert 2s */
+            animation: fadeInFinal 2s ease-out 12s forwards; /* Verzögerung angepasst auf 12s */
         }
         @keyframes fadeInFinal {
             from { opacity: 0; }
@@ -820,13 +820,13 @@
 
                     setTimeout(() => {
                         typewriterBig.style.width = '100%';
-                    }, 500); // Start nach 0.5s
+                    }, 1000); // Start nach 1s
                     setTimeout(() => {
                         typewriterMid.style.width = '100%';
-                    }, 3000); // Nach 3s
+                    }, 5000); // Nach 5s
                     setTimeout(() => {
                         typewriterSmall.style.width = '100%';
-                    }, 5000); // Nach 5s
+                    }, 9000); // Nach 9s
                 }
             }
 
