@@ -228,8 +228,8 @@
         <h1>Agenten-Log in</h1>
         <p class="subtitle">Agenten, Bereiten sie sich auf ihre Mission vor</p>
         <form id="playerForm">
-            <label for="nickname">Deckname</label>
-            <input id="nickname" name="Nickname" required placeholder="Codename eingeben" />
+            <label for="Nickname">Deckname</label>
+            <input id="Nickname" name="Nickname" required placeholder="Codename eingeben" />
             <p class="note">Bitte keinen echten Namen verwenden!</p>
 
             <label for="haender">Händigkeit</label>
@@ -404,11 +404,11 @@
                 showMessage('');
                 debugDiv.textContent = '';
 
-                const nickname = document.getElementById('nickname').value.trim();
+                const Nickname = document.getElementById('Nickname').value.trim();
                 const haender = document.getElementById('haender').value;
                 const Gender = document.getElementById('Gender').value;
 
-                if (!nickname) {
+                if (!Nickname) {
                     showMessage('Bitte einen Decknamen eingeben.', 'error');
                     return;
                 }
@@ -419,7 +419,7 @@
                         // Update
                         const { error } = await supabase
                             .from(TABLE_NAME)
-                            .update({ nickname, haender, Gender, status: 'waiting', is_ready: true })
+                            .update({ nickname: Nickname, haender, Gender, status: 'waiting', is_ready: true })
                             .eq('id', playerId);
 
                         if (error) {
@@ -430,7 +430,7 @@
                         // Insert
                         const { data, error } = await supabase
                             .from(TABLE_NAME)
-                            .insert([{ nickname, haender, Gender, status: 'waiting', is_ready: true }])
+                            .insert([{ nickname: Nickname, haender, Gender, status: 'waiting', is_ready: true }])
                             .select()
                             .single();
 
@@ -473,7 +473,7 @@
                 try {
                     const { error } = await supabase
                         .from(TABLE_NAME)
-                        .update({ status: 'logged in' })
+                        .update({ status: 'pre' })
                         .eq('id', playerId);
 
                     if (error) {
