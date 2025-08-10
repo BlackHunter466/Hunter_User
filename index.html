@@ -1,155 +1,769 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <title>Spieler Warteschlange</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agenten—DB (stabil)</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .page { display: none; }
-        footer { margin-top: 30px; font-size: 0.9em; color: gray; border-top: 1px solid #ddd; padding-top: 10px; }
+        /* Grundlayout */
+        :root {
+            --accent: #00ff99;
+            --accent-2: #33ffbb;
+            --card-bg: rgba(10,10,26,0.95);
+            --header-height: 84px;
+            --footer-height: 64px;
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        /* Header */
+        .site-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(90deg, rgba(5,5,10,0.85), rgba(20,20,35,0.65));
+            border-bottom: 1px solid rgba(0,255,153,0.08);
+            z-index: 2000;
+            pointer-events: none; /* nicht klickbar, rein dekorativ */
+        }
+        .site-header h2 {
+            margin: 0;
+            padding: 0 16px;
+            font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+            font-weight: 700;
+            font-size: 28px;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-shadow: 0 2px 12px rgba(0,255,153,0.12);
+        }
+
+        /* Body & main area: reserve space for header + footer so cards aren't covered */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0a0a1a, #1a1a2e);
+            color: var(--accent);
+            margin: 0;
+            overflow: auto; /* <-- erlaubt scrollen auf kleinen Bildschirmen */
+            position: relative;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        /* main content area (all pages go here) */
+        main#main {
+            /* ensure header and footer don't overlap content:
+               padding-top = header height + a small gap,
+               padding-bottom = footer height + a small gap */
+            min-height: calc(100vh - var(--header-height) - var(--footer-height));
+            padding-top: calc(var(--header-height) + 16px);
+            padding-bottom: calc(var(--footer-height) + 16px);
+            padding-left: 1rem;
+            padding-right: 1rem;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        /* Card */
+        .card {
+            background: linear-gradient(145deg, rgba(10, 10, 26, 0.9), rgba(26, 26, 46, 0.9));
+            border: 2px solid var(--accent);
+            padding: 2.5rem;
+            border-radius: 12px;
+            max-width: 550px;
+            width: 100%;
+            box-shadow: 0 4px 10px rgba(0, 255, 153, 0.2);
+            text-align: center;
+            animation: fadeInScale 0.8s ease-out;
+            position: relative;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 1px 2px rgba(0, 255, 153, 0.25);
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--accent-2);
+            margin-bottom: 1.5rem;
+            opacity: 0.95;
+            text-shadow: 0 0.5px 1px rgba(51, 255, 187, 0.12);
+        }
+
+        /* Form Controls */
+        input, select, button {
+            width: 100%;
+            padding: 0.8rem;
+            margin-top: 0.4rem;
+            border-radius: 8px;
+            border: 1px solid var(--accent);
+            background: rgba(17, 17, 17, 0.85);
+            color: var(--accent);
+            font-size: 1rem;
+            transition: all 0.25s ease;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-2);
+            box-shadow: 0 0 6px rgba(51,255,187,0.18);
+        }
+        button {
+            background: linear-gradient(90deg, #006633, #009966);
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        button:hover { transform: scale(1.02); }
+
+        label { display: block; text-align: left; margin-top: 0.5rem; color: var(--accent-2); }
+        .note { color: var(--accent-2); font-size: 1rem; margin-top: 0.5rem; text-align: left; opacity: 0.95; }
+        .error { color: #ff6666; font-weight: bold; margin-top: 1rem; animation: pulse 0.5s ease-in-out; }
+        .success { color: var(--accent); font-weight: bold; margin-top: 1rem; animation: fadeIn 0.5s ease-out; }
+
+        #message { margin-top: 1rem; min-height: 1.2rem; }
+        #debug {
+            margin-top: 1.5rem;
+            text-align: left;
+            color: #99ffcc;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow: auto;
+            background: rgba(10, 10, 26, 0.7);
+            padding: 0.6rem;
+            border-radius: 8px;
+            border: 1px dashed #33bbff;
+            transition: opacity 0.3s ease;
+        }
+        #debug:empty { display: none; }
+
+        .loader {
+            border: 4px solid rgba(34, 34, 34, 0.8);
+            border-top: 4px solid var(--accent);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1.2s linear infinite;
+            display: inline-block;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        /* queue position highlight animation */
+        .position-up {
+            animation: positionUp 1s cubic-bezier(.2,.9,.24,1);
+            color: #ffffff;
+            text-shadow: 0 0 16px rgba(0,255,153,0.9), 0 0 36px rgba(0,255,153,0.25);
+        }
+        @keyframes positionUp {
+            0%   { transform: translateY(0) scale(1); }
+            25%  { transform: translateY(-10px) scale(1.25); }
+            50%  { transform: translateY(6px)  scale(1.08); }
+            75%  { transform: translateY(-4px)  scale(1.05); }
+            100% { transform: translateY(0)   scale(1); }
+        }
+
+        /* pop-badge (Vorgerückt!) */
+        .pop-badge {
+            display: inline-block;
+            margin-left: 10px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            color: #002214;
+            font-weight: 700;
+            padding: 6px 10px;
+            border-radius: 999px;
+            box-shadow: 0 8px 30px rgba(0,255,153,0.12);
+            transform-origin: center;
+            animation: popIn 900ms cubic-bezier(.2,.9,.2,1);
+            opacity: 0;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.3) translateY(8px); opacity: 0; }
+            50% { transform: scale(1.15) translateY(-6px); opacity: 1; }
+            80% { transform: scale(0.95) translateY(0); opacity: 1; }
+            100% { transform: scale(1) translateY(0); opacity: 0; }
+        }
+
+        /* prePage card overrides (keine Pfeile, keine Buttons) */
+        #prePage {
+            display: none;
+            position: fixed;
+            /* respect header and footer so overlay isn't covered */
+            top: var(--header-height);
+            bottom: var(--footer-height);
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);
+            color: #ffffff;
+            justify-content: center;
+            align-items: center;
+            z-index: 2001;
+            animation: fadeInScale 0.8s ease-out;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+        #prePage .card {
+            background: linear-gradient(145deg, rgba(10,10,26,0.97), rgba(26,26,46,0.97));
+            border-color: var(--accent);
+            box-shadow: 0 5px 25px rgba(0,255,153,0.15);
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+            max-width: 700px;
+            width: 90%;
+            text-align: center;
+        }
+        #prePage h1 { font-size: 2rem; text-shadow: 0 0 5px #ffffff; margin-bottom: 1rem; color: var(--accent); }
+        #prePage p { font-size: 1rem; margin: 0.5rem 0; text-shadow: 0 0 2px #ffffff; color: #cfeee0; }
+
+        /* Die gewünschten Texte auf prePage in verschiedenen Größen */
+        .pre-big {
+            font-size: 3rem;
+            color: var(--accent);
+            margin: 0.6rem 0;
+            text-shadow: 0 6px 18px rgba(0,255,153,0.08);
+        }
+        .pre-mid {
+            font-size: 1.15rem;
+            color: #d6f6e8;
+            margin-top: 0.6rem;
+            opacity: 0.95;
+        }
+        .pre-small {
+            font-size: 0.9rem;
+            color: #bfeee0;
+            margin-top: 0.35rem;
+            opacity: 0.85;
+        }
+
+        /* Animations kept for general UI */
+        @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .card[style*="display: none"] { animation: fadeOut 0.5s ease-out; }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+        /* Fixed footer with height variable so main content won't be covered */
+        footer {
+            height: var(--footer-height);
+            padding: 1rem;
+            color: #33ffbb;
+            font-size: 1rem;
+            opacity: 0.8;
+            text-align: center;
+            width: 100%;
+            background: linear-gradient(135deg, #0a0a1a, #1a1a2e);
+            border-top: 1px solid var(--accent);
+            user-select: none;
+            pointer-events: none;
+            font-family: 'Arial', sans-serif;
+            box-sizing: border-box;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+        }
+
+        /* kleinere Bildschirme: etwas kompakter */
+        @media (max-width: 520px) {
+            .pre-big { font-size: 2.2rem; }
+            .site-header h2 { font-size: 20px; }
+            main#main { padding-top: calc(var(--header-height) + 8px); padding-bottom: calc(var(--footer-height) + 8px); }
+        }
     </style>
 </head>
 <body>
-    <!-- Seiten -->
-    <div id="registrationPage" class="page">
-        <h1>Registrierung</h1>
-        <form id="registrationForm">
-            <input type="text" id="name" placeholder="Name" required>
-            <button type="submit">Anmelden</button>
-        </form>
+    <!-- Globaler Header (auf allen Seiten sichtbar) -->
+    <header class="site-header" aria-hidden="true">
+        <h2>Hektagon</h2>
+    </header>
+
+    <!-- Main wrapper: ensures pages area is sized between header and footer -->
+    <main id="main" role="main">
+        <div id="formPage" class="card" role="document">
+            <h1>Agenten-Log in</h1>
+            <p class="subtitle">Agenten, Bereiten Sie sich auf Ihre Mission vor</p>
+            <form id="playerForm">
+                <label for="Nickname">Deckname</label>
+                <input id="Nickname" name="Nickname" required placeholder="Codename eingeben" />
+                <p class="note">Bitte keinen echten Namen verwenden!</p>
+
+                <label for="haender">Händigkeit</label>
+                <select id="haender" name="haender" required>
+                    <option value="links">Links</option>
+                    <option value="rechts">Rechts</option>
+                </select>
+
+                <label for="Gender">Geschlecht</label>
+                <select id="Gender" name="Gender" required>
+                    <option value="m">Männlich</option>
+                    <option value="w">Weiblich</option>
+                    <option value="d">keine Angabe</option>
+                </select>
+
+                <button type="submit">Profil sichern</button>
+            </form>
+            <div id="message" aria-live="polite"></div>
+            <div id="debug" style="display:none;"></div>
+        </div>
+
+        <div id="confirmationPage" class="card" style="display:none" role="document">
+            <h1>Agentenprofil gespeichert</h1>
+            <p class="success">Bitte lesen Sie folgende Sicherheitsinstruktionen.</p>
+            <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen und akzeptiert</label>
+            <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
+            <div id="confMessage"></div>
+        </div>
+
+        <div id="waitingPage" class="card" style="display:none" role="document">
+            <h1>Einsatzwarteschlange</h1>
+            <p>Bitte warten Sie. Sie werden gleich aufgerufen. Bleiben Sie auf dieser Seite<span class="loader"></span></p>
+            <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span>
+                <!-- badge wird dynamisch gezeigt -->
+                <span id="popBadgeContainer" aria-hidden="true"></span>
+            </p>
+            <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
+        </div>
+    </main>
+
+    <!-- prePage: keine Pfeile, kein Button, stattdessen Texte; positioned so header/footer don't cover it -->
+    <div id="prePage" style="display:none" aria-live="polite" role="dialog" aria-label="Einsatz Startmeldung">
+        <div class="card" role="document">
+            <h1>Es geht los!</h1>
+            <p class="pre-big">Viel Glück</p>
+            <p class="pre-mid">Passen Sie auf sich auf.</p>
+            <p class="pre-small">Wir hoffen, Sie kommen zurück.</p>
+            <h1>Hektagon Zentrale: Ende</h1>
+        </div>
     </div>
 
-    <div id="waitingPage" class="page">
-        <h1>Warteschlange</h1>
-        <p>Spieler vor dir: <span id="queuePos">Wird ermittelt...</span></p>
-        <pre id="waitingDebug"></pre>
-    </div>
+    <footer>Bei Problemen wenden Sie sich an die Equipmentausgabe.</footer>
 
-    <div id="prePage" class="page">
-        <h1>Vorbereitung</h1>
-        <p>Bitte mach dich bereit.</p>
-    </div>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+            const TABLE_NAME = 'Players';
 
-    <div id="securityInfoPage" class="page">
-        <h1>Sicherheitsinformation</h1>
-        <p>Bitte beachte die Sicherheitsanweisungen vor Spielbeginn.</p>
-    </div>
+            const messageDiv = document.getElementById('message');
+            const debugDiv = document.getElementById('debug');
+            const queuePos = document.getElementById('queuePos');
+            const popBadgeContainer = document.getElementById('popBadgeContainer');
 
-    <div id="confirmationPage" class="page">
-        <h1>Bestätigung</h1>
-        <p>Du bist erfolgreich registriert.</p>
-    </div>
+            const pages = {
+                formPage: document.getElementById('formPage'),
+                confirmationPage: document.getElementById('confirmationPage'),
+                waitingPage: document.getElementById('waitingPage'),
+                prePage: document.getElementById('prePage')
+            };
 
-    <footer>
-        Bei Problemen wenden Sie sich an die Equipmentausgabe.
-    </footer>
+            let lastKnownPosition = null; // für Aufstiegs-Detektion
 
-    <script type="module">
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-        const supabaseUrl = 'https://YOUR_PROJECT.supabase.co';
-        const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';
-        const supabase = createClient(supabaseUrl, supabaseKey);
-        const TABLE_NAME = 'players';
-
-        const pages = {
-            registrationPage: document.getElementById('registrationPage'),
-            waitingPage: document.getElementById('waitingPage'),
-            prePage: document.getElementById('prePage'),
-            securityInfoPage: document.getElementById('securityInfoPage'),
-            confirmationPage: document.getElementById('confirmationPage')
-        };
-
-        const queuePos = document.getElementById('queuePos');
-
-        function showPage(pageName) {
-            Object.values(pages).forEach(p => p.style.display = 'none');
-            if (pages[pageName]) pages[pageName].style.display = 'block';
-        }
-
-        async function updateQueue(playerId) {
-            try {
-                const { data: allWaiting, error } = await supabase
-                    .from(TABLE_NAME)
-                    .select('id, created_at')
-                    .eq('is_ready', true)
-                    .order('created_at', { ascending: true });
-
-                if (error) {
-                    queuePos.textContent = 'Fehler';
-                    return;
-                }
-
-                const myEntry = allWaiting.find(p => String(p.id) === String(playerId));
-                if (!myEntry) {
-                    queuePos.textContent = 'Nicht in Warteschlange';
-                    return;
-                }
-
-                const playersBefore = allWaiting.filter(p => new Date(p.created_at) < new Date(myEntry.created_at));
-                queuePos.textContent = playersBefore.length;
-                document.getElementById('waitingDebug').textContent =
-                    `Vor dir: ${playersBefore.length}, Gesamt: ${allWaiting.length}`;
-            } catch (err) {
-                queuePos.textContent = 'Fehler';
+            function appendDebug(txt) {
+                console.log(txt);
+                debugDiv.style.display = '';
+                debugDiv.textContent += (debugDiv.textContent ? '\n' : '') + txt;
             }
-        }
+            function showMessage(text, kind = '') {
+                messageDiv.textContent = text;
+                messageDiv.className = kind;
+            }
 
-        async function checkStatusOnLoad() {
-            const savedPlayerId = localStorage.getItem('player_id');
-            if (!savedPlayerId) {
-                showPage('registrationPage');
+            if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+                showMessage('Fatal: Supabase SDK nicht gefunden oder inkompatibel.', 'error');
+                appendDebug('SDK missing: window.supabase.createClient nicht verfügbar.');
                 return;
             }
 
+            let supabase;
             try {
-                const { data, error } = await supabase
-                    .from(TABLE_NAME)
-                    .select('status, is_ready, created_at')
-                    .eq('id', savedPlayerId)
-                    .single();
+                supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+                appendDebug('Supabase-Client erfolgreich initialisiert.');
+            } catch (err) {
+                showMessage('Fehler bei der Initialisierung von Supabase: ' + err.message, 'error');
+                appendDebug('Initialisierungsfehler: ' + err.message);
+                return;
+            }
 
-                if (error || !data) {
-                    showPage('registrationPage');
+            // Prüfe Tabelle
+            async function checkTable() {
+                appendDebug(`Prüfe Tabelle "${TABLE_NAME}"...`);
+                try {
+                    const { data, error } = await supabase.from(TABLE_NAME).select('id').limit(1);
+                    if (error) {
+                        appendDebug(`Fehler bei Tabelle "${TABLE_NAME}": ${error.message}`);
+                        showMessage(`Tabelle "${TABLE_NAME}" nicht zugänglich: ${error.message}`, 'error');
+                        return false;
+                    }
+                    appendDebug(`Tabelle "${TABLE_NAME}" gefunden und zugänglich.`);
+                    return true;
+                } catch (err) {
+                    appendDebug(`Unerwarteter Fehler bei Tabellenprüfung: ${err.message}`);
+                    showMessage('Unerwarteter Fehler bei der Tabellenprüfung.', 'error');
+                    return false;
+                }
+            }
+
+            if (!await checkTable()) return;
+
+            // Seiten anzeigen / Polling managen
+            let queuePollingInterval = null;
+            function showPage(pageName) {
+                for (const p in pages) {
+                    pages[p].style.display = (p === pageName) ? 'block' : 'none';
+                }
+                // Debug nur im Formular sichtbar
+                debugDiv.style.display = (pageName === 'formPage') ? '' : 'none';
+
+                // Stoppe Queue-Polling wenn wir nicht auf der Warteseite sind
+                if (pageName !== 'waitingPage' && queuePollingInterval) {
+                    clearInterval(queuePollingInterval);
+                    queuePollingInterval = null;
+                    appendDebug('Polling für Warteschlange beendet.');
+                }
+            }
+
+            // Helfer: zeige kurz Pop-Badge und Animation
+            function triggerAdvanceAnimation() {
+                // avoid stacking multiple badges
+                popBadgeContainer.innerHTML = '';
+                const badge = document.createElement('span');
+                badge.className = 'pop-badge';
+                badge.textContent = 'Vorgerückt!';
+                popBadgeContainer.appendChild(badge);
+
+                // animate queuePos with class
+                queuePos.classList.remove('position-up'); // restart
+                // force reflow to restart animation if needed
+                // eslint-disable-next-line no-unused-expressions
+                queuePos.offsetWidth;
+                queuePos.classList.add('position-up');
+
+                // remove badge after animation duration (900ms) + small buffer
+                setTimeout(() => {
+                    popBadgeContainer.innerHTML = '';
+                    queuePos.classList.remove('position-up');
+                }, 1100);
+            }
+
+            // Warteschlange updaten (berechne Position anhand created_at)
+            async function updateQueue(playerId) {
+                try {
+                    appendDebug('Starte Warteschlangen-Update...');
+                    const { data: allWaiting, error } = await supabase
+                        .from(TABLE_NAME)
+                        .select('id, created_at')
+                        .eq('is_ready', true)
+                        .order('created_at', { ascending: true });
+
+                    if (error) {
+                        appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message}`);
+                        queuePos.textContent = 'Fehler beim Laden';
+                        return;
+                    }
+                    if (!allWaiting || allWaiting.length === 0) {
+                        appendDebug('Keine wartenden Spieler gefunden.');
+                        queuePos.textContent = '0';
+                        document.getElementById('waitingDebug').textContent = 'Wartende: 0';
+                        // reset lastKnownPosition wenn niemand wartet
+                        lastKnownPosition = null;
+                        return;
+                    }
+
+                    const myIndex = allWaiting.findIndex(item => String(item.id) === String(playerId));
+                    if (myIndex === -1) {
+                        appendDebug('Spieler nicht in Warteschlange gefunden.');
+                        queuePos.textContent = 'Nicht in Warteschlange';
+                        lastKnownPosition = null;
+                        return;
+                    }
+
+                    const position = myIndex + 1;
+                    const playersAhead = myIndex;
+                    queuePos.textContent = `${position} (Vor dir: ${playersAhead})`;
+                    document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Pos: ${position}`;
+                    appendDebug(`Position berechnet: ${position}`);
+
+                    // Wenn lastKnownPosition existiert und neue Position kleiner -> Aufstieg
+                    if (lastKnownPosition !== null && typeof lastKnownPosition === 'number') {
+                        if (position < lastKnownPosition) {
+                            appendDebug(`Aufstieg erkannt: ${lastKnownPosition} -> ${position}`);
+                            triggerAdvanceAnimation();
+                        }
+                    }
+                    // update lastKnownPosition
+                    lastKnownPosition = position;
+                } catch (err) {
+                    appendDebug(`Queue-Update-Fehler: ${err.message}`);
+                    queuePos.textContent = 'Fehler aufgetreten';
+                }
+            }
+
+            function startQueuePolling(playerId) {
+                // playerId optional
+                if (!playerId) playerId = localStorage.getItem('player_id');
+                // reset lastKnownPosition to allow correct detect after rejoin
+                // but keep it null until first poll finishes (so no false positive)
+                // lastKnownPosition stays as-is if previously set
+                updateQueue(playerId);
+                if (queuePollingInterval) clearInterval(queuePollingInterval);
+                queuePollingInterval = setInterval(() => updateQueue(playerId), 5000);
+            }
+
+            // Beim Laden prüfen, welchen Status der Spieler hat
+            async function checkPlayerStatusOnLoad() {
+                const playerId = localStorage.getItem('player_id');
+                if (!playerId) {
+                    showPage('formPage');
+                    return;
+                }
+                try {
+                    const { data, error } = await supabase
+                        .from(TABLE_NAME)
+                        .select('status')
+                        .eq('id', playerId)
+                        .single();
+
+                    if (error || !data) {
+                        appendDebug(`Fehler beim Abrufen des Status: ${error ? error.message : 'Keine Daten'}`);
+                        showPage('formPage');
+                        return;
+                    }
+                    appendDebug(`Status beim Laden: ${data.status}`);
+
+                    if (data.status === 'pre') {
+                        // Wenn beim Laden bereits 'pre', entferne den Spieler aus der Warteschlange (is_ready = false)
+                        try {
+                            const { error: updErr } = await supabase
+                                .from(TABLE_NAME)
+                                .update({ is_ready: false })
+                                .eq('id', playerId);
+                            if (updErr) {
+                                appendDebug(`Fehler beim Entfernen aus Warteschlange (onLoad): ${updErr.message}`);
+                            } else {
+                                appendDebug('Spieler beim Laden aus Warteschlange entfernt (is_ready=false).');
+                            }
+                        } catch (err) {
+                            appendDebug(`Update-Catch (onLoad): ${err.message}`);
+                        }
+                        showPage('prePage');
+                        return;
+                    }
+
+                    switch (data.status) {
+                        case 'logged in':
+                            showPage('confirmationPage');
+                            break;
+                        case 'waiting':
+                            showPage('waitingPage');
+                            // ensure lastKnownPosition is reset so first poll initializes it
+                            lastKnownPosition = null;
+                            startQueuePolling(playerId);
+                            break;
+                        default:
+                            showPage('formPage');
+                            break;
+                    }
+                } catch (err) {
+                    appendDebug(`Fehler bei Status-Check beim Laden: ${err.message}`);
+                    showPage('formPage');
+                }
+            }
+
+            // Formular absenden -> Einfügen mit status 'logged in'
+            document.getElementById('playerForm').addEventListener('submit', async (ev) => {
+                ev.preventDefault();
+                debugDiv.textContent = '';
+                showMessage('');
+
+                const NicknameInput = document.getElementById('Nickname');
+                const haenderInput = document.getElementById('haender');
+                const GenderInput = document.getElementById('Gender');
+
+                if (NicknameInput.value.trim().length < 2) {
+                    showMessage('Deckname muss mindestens 2 Zeichen lang sein.', 'error');
                     return;
                 }
 
-                if (data.status === 'waiting') {
-                    showPage('waitingPage');
-                    updateQueue(savedPlayerId);
-                    setInterval(() => updateQueue(savedPlayerId), 5000);
-                } else if (data.status === 'pre') {
-                    showPage('prePage');
-                } else if (data.status === 'logged in') {
-                    showPage('securityInfoPage');
-                } else {
+                try {
+                    // Duplikat-Prüfung
+                    const { data: existingPlayers, error: checkError } = await supabase
+                        .from(TABLE_NAME)
+                        .select('id')
+                        .eq('Nickname', NicknameInput.value.trim());
+
+                    if (checkError) {
+                        appendDebug(`Fehler beim Prüfen auf doppelte Anmeldung: ${checkError.message}`);
+                        showMessage('Fehler beim Prüfen der Anmeldung.', 'error');
+                        return;
+                    }
+                    if (existingPlayers && existingPlayers.length > 0) {
+                        showMessage('Dieser Deckname ist bereits registriert. Bitte wähle einen anderen.', 'error');
+                        return;
+                    }
+
+                    // localStorage-ID prüfen (falls vorhanden)
+                    const localPlayerId = localStorage.getItem('player_id');
+                    if (localPlayerId) {
+                        const { data: existingLocal, error: localError } = await supabase
+                            .from(TABLE_NAME)
+                            .select('id')
+                            .eq('id', localPlayerId);
+                        if (localError) appendDebug(`Fehler bei lokaler ID-Prüfung: ${localError.message}`);
+                        else if (existingLocal && existingLocal.length > 0) {
+                            showMessage('Du bist bereits angemeldet.', 'error');
+                            return;
+                        }
+                    }
+
+                    // Insert (status 'logged in')
+                    const { data, error } = await supabase
+                        .from(TABLE_NAME)
+                        .insert([{
+                            Nickname: NicknameInput.value.trim(),
+                            haender: haenderInput.value,
+                            Gender: GenderInput.value,
+                            status: 'logged in',
+                            is_ready: false,
+                            created_at: new Date().toISOString()
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) {
+                        appendDebug(`Insert-Fehler: ${error.message}`);
+                        showMessage('Fehler beim Speichern des Profils.', 'error');
+                        return;
+                    }
+
+                    localStorage.setItem('player_id', data.id);
+                    showMessage('Profil gespeichert. Bitte lesen und bestätigen Sie die Sicherheitsinformationen.', 'success');
                     showPage('confirmationPage');
+
+                } catch (err) {
+                    appendDebug(`Unbekannter Fehler beim Speichern: ${err.message}`);
+                    showMessage('Unbekannter Fehler beim Speichern.', 'error');
                 }
-            } catch {
-                showPage('registrationPage');
+            });
+
+            // Sicherheitsseite: Checkbox & Button-Logik
+            const securityConfirmCheckbox = document.getElementById('securityConfirm');
+            const proceedBtn = document.getElementById('proceedBtn');
+
+            securityConfirmCheckbox.addEventListener('change', () => {
+                proceedBtn.disabled = !securityConfirmCheckbox.checked;
+            });
+
+            proceedBtn.addEventListener('click', async () => {
+                const playerId = localStorage.getItem('player_id');
+                if (!playerId) {
+                    showMessage('Keine gültige Anmeldung gefunden. Bitte neu anmelden.', 'error');
+                    showPage('formPage');
+                    return;
+                }
+                proceedBtn.disabled = true;
+                proceedBtn.textContent = 'Speichere...';
+                try {
+                    const { error } = await supabase
+                        .from(TABLE_NAME)
+                        .update({ status: 'waiting', is_ready: true })
+                        .eq('id', playerId);
+
+                    if (error) {
+                        appendDebug(`Fehler beim Update auf 'waiting': ${error.message}`);
+                        showMessage('Fehler beim Aktualisieren des Status.', 'error');
+                        proceedBtn.disabled = false;
+                        proceedBtn.textContent = 'Weiter zur Einsatzwarteschlange';
+                        return;
+                    }
+
+                    showPage('waitingPage');
+                    // reset lastKnownPosition so animation detection starts fresh
+                    lastKnownPosition = null;
+                    startQueuePolling(playerId);
+
+                } catch (err) {
+                    appendDebug(`Unbekannter Fehler beim Status-Update: ${err.message}`);
+                    showMessage('Unbekannter Fehler beim Status-Update.', 'error');
+                    proceedBtn.disabled = false;
+                    proceedBtn.textContent = 'Weiter zur Einsatzwarteschlange';
+                }
+            });
+
+            // Regelmässiger Status-Check (z.B. Admin setzt pre)
+            async function checkPlayerStatus() {
+                const playerId = localStorage.getItem('player_id');
+                if (!playerId) return;
+                try {
+                    const { data, error } = await supabase
+                        .from(TABLE_NAME)
+                        .select('status')
+                        .eq('id', playerId)
+                        .single();
+
+                    if (error) {
+                        appendDebug(`Fehler beim Status-Abruf: ${error.message}`);
+                        return;
+                    }
+
+                    appendDebug(`Aktueller Status: ${data.status}`);
+                    if (data.status === 'pre') {
+                        // Wenn Admin den Status auf pre setzt, entferne Spieler aus Warteschlange (is_ready=false),
+                        // zeige prePage und stoppe Queue-Polling lokal.
+                        try {
+                            const { error: updErr } = await supabase
+                                .from(TABLE_NAME)
+                                .update({ is_ready: false })
+                                .eq('id', playerId);
+
+                            if (updErr) {
+                                appendDebug(`Fehler beim is_ready=false setzen nach pre: ${updErr.message}`);
+                            } else {
+                                appendDebug('Spieler in DB aus Warteschlange entfernt (is_ready=false) wegen pre.');
+                            }
+                        } catch (err) {
+                            appendDebug(`Update-Catch (pre): ${err.message}`);
+                        }
+
+                        // show pre page and stop local polling
+                        showPage('prePage');
+                        if (queuePollingInterval) { clearInterval(queuePollingInterval); queuePollingInterval = null; appendDebug('Polling gestoppt wegen pre'); }
+
+                    } else if (data.status === 'waiting') {
+                        if (pages.waitingPage.style.display !== 'block') {
+                            showPage('waitingPage');
+                            // preserve lastKnownPosition so we can detect movement
+                            startQueuePolling(playerId);
+                        }
+                    } else if (data.status === 'logged in') {
+                        if (pages.confirmationPage.style.display !== 'block') showPage('confirmationPage');
+                    }
+                } catch (err) {
+                    appendDebug(`Status-Check-Fehler: ${err.message}`);
+                }
             }
-        }
 
-        document.getElementById('registrationForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = document.getElementById('name').value.trim();
-            if (!name) return;
+            // Starte periodischen Status-Check
+            setInterval(checkPlayerStatus, 5000);
 
-            const { data, error } = await supabase
-                .from(TABLE_NAME)
-                .insert([{ name, status: 'waiting', is_ready: true }])
-                .select()
-                .single();
-
-            if (!error && data) {
-                localStorage.setItem('player_id', data.id);
-                showPage('waitingPage');
-                updateQueue(data.id);
-                setInterval(() => updateQueue(data.id), 5000);
-            }
+            // Initiale Prüfung beim Laden
+            await checkPlayerStatusOnLoad();
         });
-
-        checkStatusOnLoad();
     </script>
 </body>
 </html>
