@@ -1,149 +1,106 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Agenten—DB</title>
-    <style>
-        body {
-            font-family: Courier, monospace;
-            background: #000;
-            color: #00ff99;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background: rgba(0,0,0,.85);
-            border: 2px solid #00ff99;
-            padding: 2rem;
-            border-radius: 8px;
-            max-width: 520px;
-            width: 100%;
-            box-shadow: 0 0 15px #00ff99;
-            text-align: center;
-        }
-        input, select, button {
-            width: 100%;
-            padding: .7rem;
-            margin-top: .3rem;
-            border-radius: 4px;
-            border: 1px solid #00ff99;
-            background: #111;
-            color: #00ff99;
-        }
-        small {
-            color: #0ff;
-            font-size: .8rem;
-            display: block;
-            margin-top: .2rem;
-            text-align: left;
-        }
-        .error { color: #ff6666; font-weight: bold; margin-top: 1rem; }
-        .success { color: #00ff99; font-weight: bold; margin-top: 1rem; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spielerprofil</title>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #121212;
+        color: white;
+        margin: 0;
+        padding: 20px;
+    }
+    form {
+        background-color: #1e1e1e;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 400px;
+        margin: auto;
+    }
+    label {
+        display: block;
+        margin-top: 10px;
+    }
+    input, select, button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border: none;
+        border-radius: 4px;
+    }
+    button {
+        background-color: #ff4b4b;
+        color: white;
+        cursor: pointer;
+    }
+    button:hover {
+        background-color: #ff2b2b;
+    }
+</style>
 </head>
 <body>
-    <div id="formPage" class="card">
-        <h1>Agenten-Datenbank</h1>
-        <form id="playerForm">
-            <label for="nickname">Deckname</label>
-            <input id="nickname" name="Nickname" required placeholder="Codename eingeben" />
-            <small>Bitte keinen echten Namen verwenden!</small>
 
-            <label for="haender">Händigkeit</label>
-            <select id="haender" name="haender" required>
-                <option value="links">Links</option>
-                <option value="rechts">Rechts</option>
-            </select>
+<h1>Spielerprofil erstellen</h1>
+<form id="playerForm">
+    <label for="nickname">Nickname:</label>
+    <input type="text" id="nickname" name="nickname" required>
 
-            <label for="gender">Geschlecht</label>
-            <select id="gender" name="Gender" required>
-                <option value="m">Männlich</option>
-                <option value="w">Weiblich</option>
-                <option value="d">Divers</option>
-            </select>
+    <label for="haender">Händigkeit:</label>
+    <select id="haender" name="haender" required>
+        <option value="links">Links</option>
+        <option value="rechts">Rechts</option>
+        <option value="beide">Beide</option>
+    </select>
 
-            <button type="submit">Profil sichern</button>
-        </form>
-        <div id="message"></div>
-    </div>
+    <label for="gender">Geschlecht:</label>
+    <select id="gender" name="gender" required>
+        <option value="m">Männlich</option>
+        <option value="w">Weiblich</option>
+        <option value="d">Divers</option>
+    </select>
 
-    <div id="waitingPage" class="card" style="display:none">
-        <h1>Einsatzwarteschlange</h1>
-        <p>Aktuelle Position: <span id="queuePos">-</span></p>
-    </div>
+    <label for="is_ready">Bereit?</label>
+    <select id="is_ready" name="is_ready" required>
+        <option value="true">Ja</option>
+        <option value="false">Nein</option>
+    </select>
 
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Deine Supabase-Daten
-            const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-            const supabaseKey = 'DEIN_PUBLIC_KEY_HIER';
-            const TABLE_NAME = 'Players';
-            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    <button type="submit">Speichern</button>
+</form>
 
-            const form = document.getElementById('playerForm');
-            const message = document.getElementById('message');
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
+    const TABLE_NAME = 'Players';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                message.textContent = '';
+    const form = document.getElementById('playerForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-                const nickname = document.getElementById('nickname').value.trim();
-                const haender = document.getElementById('haender').value;
-                const gender = document.getElementById('gender').value;
+        const nickname = document.getElementById('nickname').value.trim();
+        const haender = document.getElementById('haender').value;
+        const gender = document.getElementById('gender').value;
+        const is_ready = document.getElementById('is_ready').value === 'true';
 
-                if (nickname.length < 2) {
-                    message.textContent = 'Deckname muss mind. 2 Zeichen haben.';
-                    message.className = 'error';
-                    return;
-                }
+        const { data, error } = await supabase
+            .from(TABLE_NAME)
+            .insert([{ nickname, haender, gender, is_ready }]);
 
-                const { data, error } = await supabase
-                    .from(TABLE_NAME)
-                    .insert([{ Nickname: nickname, haender, Gender: gender, is_ready: true }])
-                    .select();
+        if (error) {
+            alert('Fehler beim Speichern: ' + error.message);
+            console.error(error);
+        } else {
+            alert('Spieler erfolgreich gespeichert!');
+            form.reset();
+        }
+    });
+});
+</script>
 
-                if (error) {
-                    message.textContent = 'Fehler: ' + error.message;
-                    message.className = 'error';
-                    return;
-                }
-
-                // Speichere ID im Browser
-                localStorage.setItem('player_id', data[0].id);
-
-                // Wechsel zur Warteschlange
-                document.getElementById('formPage').style.display = 'none';
-                document.getElementById('waitingPage').style.display = 'block';
-                updateQueue();
-                subscribeQueue();
-            });
-
-            async function updateQueue() {
-                const playerId = localStorage.getItem('player_id');
-                const { data, error } = await supabase
-                    .from(TABLE_NAME)
-                    .select('id, created_at')
-                    .order('created_at');
-
-                if (!error && data) {
-                    const pos = data.findIndex(p => p.id == playerId) + 1;
-                    document.getElementById('queuePos').textContent = pos || '-';
-                }
-            }
-
-            function subscribeQueue() {
-                supabase
-                    .channel('queue-updates')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_NAME }, updateQueue)
-                    .subscribe();
-            }
-        });
-    </script>
 </body>
 </html>
