@@ -130,6 +130,8 @@
             margin-left: 6px;
             vertical-align: middle;
         }
+
+        /* Pre-page overlay (keine funktionale Änderung) */
         #prePage {
             display: none;
             position: fixed;
@@ -143,27 +145,73 @@
             align-items: center;
             z-index: 1000;
             animation: fadeInScale 0.8s ease-out;
+            display: flex;
+            padding: 2rem;
+            box-sizing: border-box;
         }
         #prePage .card {
-            background: rgba(26, 26, 46, 0.9);
+            background: linear-gradient(145deg, rgba(10,10,26,0.95), rgba(26,26,46,0.95));
             border-color: #00ff99;
-            box-shadow: 0 5px 15px rgba(0, 255, 153, 0.2);
+            box-shadow: 0 5px 25px rgba(0,255,153,0.15);
             padding: 2rem;
             position: relative;
             overflow: hidden;
+            max-width: 700px;
+            width: 90%;
+            text-align: center;
         }
-        #prePage h1 { font-size: 2rem; text-shadow: 0 0 5px #ffffff; margin-bottom: 1rem; }
-        #prePage p { font-size: 1rem; margin: 0.5rem 0; text-shadow: 0 0 2px #ffffff; }
-        #prePage button { background: linear-gradient(90deg, #006633, #009966); padding: 0.8rem; font-size: 1rem; border: none; cursor: pointer; font-weight: bold; color: #fff; border-radius: 8px; transition: all 0.3s ease; }
-        #prePage button:hover { background: linear-gradient(90deg, #008040, #00cc66); transform: scale(1.03); }
-        .arrow-animation { position: absolute; bottom: -40px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-bottom: 30px solid transparent; border-top: 30px solid #0000ff; animation: arrowReveal 1.5s ease-out forwards; z-index: 1; }
+        #prePage h1 { font-size: 2rem; text-shadow: 0 0 5px #ffffff; margin-bottom: 1rem; color: #00ff99; }
+        #prePage p { font-size: 1rem; margin: 0.5rem 0; text-shadow: 0 0 2px #ffffff; color: #cfeee0; }
+
+        /* Kleine Pfeil-Animation (bleibt erhalten, falls jemand's CSS erwartet) */
+        .arrow-animation {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-bottom: 30px solid transparent;
+            border-top: 30px solid #0000ff;
+            animation: arrowReveal 1.5s ease-out forwards;
+            z-index: 1;
+            opacity: 0.9;
+        }
         @keyframes arrowReveal { 0% { height: 0; opacity: 0; } 100% { height: 60px; opacity: 1; transform: translateX(-50%) translateY(-60px); } }
+
+        /* Großer blinkender Pfeil für prePage */
+        .big-arrow {
+            font-size: 6.5rem;               /* deutlich größer als vorher */
+            line-height: 1;
+            margin: 1.25rem 0;
+            color: #00ff99;
+            text-shadow: 0 0 8px rgba(0,255,153,0.6), 0 0 20px rgba(0,255,153,0.15);
+            display: inline-block;
+            animation: blinkArrow 1s steps(2, jump-start) infinite, floatArrow 2.8s ease-in-out infinite;
+            user-select: none;
+        }
+
+        @keyframes blinkArrow {
+            0% { opacity: 1; transform: translateY(0); }
+            50% { opacity: 0.15; transform: translateY(6px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes floatArrow {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
+            100% { transform: translateY(0); }
+        }
+
         @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
         .card[style*="display: none"] { animation: fadeOut 0.5s ease-out; }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
         footer { margin-top: auto; padding: 1rem; color: #33ffbb; font-size: 1rem; opacity: 0.8; text-align: center; width: 100%; background: linear-gradient(135deg, #0a0a1a, #1a1a2e); border-top: 1px solid #00ff99; user-select: none; pointer-events: none; font-family: 'Arial', sans-serif; }
     </style>
 </head>
@@ -210,11 +258,18 @@
         <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
     </div>
 
-    <div id="prePage" class="card" style="display:none">
-        <div class="arrow-animation"></div>
-        <h1>Es geht los!</h1>
-        <p>Melden Sie sich bei der Equipmentausgabe.</p>
-        <button id="acknowledgeBtn">Bestätigen</button>
+    <div id="prePage" style="display:none">
+        <div class="card">
+            <!-- großer blinkender Pfeil in der gleichen Card wie die anderen Seiten -->
+            <div class="arrow-animation" aria-hidden="true"></div>
+            <h1>Es geht los!</h1>
+            <p>Melden Sie sich bei der Equipmentausgabe.</p>
+
+            <!-- Großer, blinkender Pfeil -->
+            <div class="big-arrow" aria-hidden="true">⬇</div>
+
+            <button id="acknowledgeBtn">Bestätigen</button>
+        </div>
     </div>
 
     <footer>Bei Problemen wenden Sie sich an die Equipmentausgabe.</footer>
