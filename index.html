@@ -1,106 +1,406 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spielerprofil</title>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #121212;
-        color: white;
-        margin: 0;
-        padding: 20px;
-    }
-    form {
-        background-color: #1e1e1e;
-        padding: 20px;
-        border-radius: 8px;
-        max-width: 400px;
-        margin: auto;
-    }
-    label {
-        display: block;
-        margin-top: 10px;
-    }
-    input, select, button {
-        width: 100%;
-        padding: 10px;
-        margin-top: 5px;
-        border: none;
-        border-radius: 4px;
-    }
-    button {
-        background-color: #ff4b4b;
-        color: white;
-        cursor: pointer;
-    }
-    button:hover {
-        background-color: #ff2b2b;
-    }
-</style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agenten—DB (stabil)</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0a0a1a, #1a1a2e);
+            color: #00ff99;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            position: relative;
+        }
+        .card {
+            background: linear-gradient(145deg, rgba(10, 10, 26, 0.9), rgba(26, 26, 46, 0.9));
+            border: 2px solid #00ff99;
+            padding: 2.5rem;
+            border-radius: 12px;
+            max-width: 550px;
+            width: 100%;
+            box-shadow: 0 8px 20px rgba(0, 255, 153, 0.3);
+            text-align: center;
+            animation: fadeInScale 0.8s ease-out;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 255, 153, 0.5);
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            color: #33ffbb;
+            margin-bottom: 1.5rem;
+            opacity: 0.9;
+            text-shadow: 0 1px 3px rgba(51, 255, 187, 0.4);
+        }
+        input, select, button {
+            width: 100%;
+            padding: 0.8rem;
+            margin-top: 0.4rem;
+            border-radius: 8px;
+            border: 1px solid #00ff99;
+            background: rgba(17, 17, 17, 0.8);
+            color: #00ff99;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #33ffbb;
+            box-shadow: 0 0 10px rgba(51, 255, 187, 0.5);
+        }
+        button {
+            background: linear-gradient(90deg, #006633, #009966);
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        button:hover {
+            background: linear-gradient(90deg, #008040, #00cc66);
+            transform: scale(1.05);
+        }
+        button:disabled {
+            background: linear-gradient(90deg, #003d1a, #005f33);
+            opacity: 0.6;
+            transform: scale(1);
+            cursor: not-allowed;
+            color: #cccccc;
+        }
+        label {
+            display: block;
+            text-align: left;
+            margin-top: 0.5rem;
+        }
+        .note {
+            color: #33ffbb;
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            text-align: left;
+            opacity: 0.9;
+        }
+        .error {
+            color: #ff6666;
+            font-weight: bold;
+            margin-top: 1rem;
+            animation: pulse 0.5s ease-in-out;
+        }
+        .success {
+            color: #00ff99;
+            font-weight: bold;
+            margin-top: 1rem;
+            animation: fadeIn 0.5s ease-out;
+        }
+        #debug {
+            margin-top: 1.5rem;
+            text-align: left;
+            color: #99ffcc;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow: auto;
+            background: rgba(10, 10, 26, 0.7);
+            padding: 0.6rem;
+            border-radius: 8px;
+            border: 1px dashed #33ffbb;
+            transition: opacity 0.3s ease;
+        }
+        #debug:empty {
+            display: none;
+        }
+        .loader {
+            border: 4px solid rgba(34, 34, 34, 0.8);
+            border-top: 4px solid #00ff99;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1.2s linear infinite;
+            display: inline-block;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        #prePage {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #ff3333, #ff6666);
+            color: #ffffff;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: flash 1s infinite alternate, fadeInScale 0.8s ease-out;
+        }
+        #prePage .card {
+            background: linear-gradient(145deg, rgba(255, 51, 51, 0.9), rgba(255, 102, 102, 0.9));
+            border-color: #ff9999;
+            box-shadow: 0 10px 30px rgba(255, 102, 102, 0.5);
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+        #prePage h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #ffffff, 0 0 20px #ff6666;
+            animation: bounce 0.8s ease-in-out infinite;
+        }
+        #prePage p {
+            font-size: 1.2rem;
+            margin: 1rem 0;
+            text-shadow: 0 0 5px #ffffff;
+        }
+        #prePage button {
+            background: linear-gradient(90deg, #ff3333, #ff6666);
+            padding: 1rem;
+            font-size: 1.2rem;
+        }
+        #prePage button:hover {
+            background: linear-gradient(90deg, #ff6666, #ff9999);
+            transform: scale(1.1);
+        }
+        .arrow-animation {
+            position: absolute;
+            bottom: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-bottom: 40px solid #00ff99;
+            animation: arrowReveal 1.5s ease-out forwards;
+            z-index: 1;
+        }
+        @keyframes arrowReveal {
+            0% { opacity: 0; transform: translateX(-50%) translateY(0); }
+            100% { opacity: 1; transform: translateX(-50%) translateY(-60px); }
+        }
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes flash {
+            from { background: linear-gradient(45deg, #ff3333, #ff6666); }
+            to { background: linear-gradient(45deg, #ff6666, #ff9999); }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .card[style*="display: none"] {
+            animation: fadeOut 0.5s ease-out;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
 </head>
 <body>
+    <div id="formPage" class="card">
+        <h1>Agenten-Datenbank</h1>
+        <p class="subtitle">Agent Bitte Einsatzformular ausfüllen</p>
+        <form id="playerForm">
+            <label for="nickname">Deckname</label>
+            <input id="nickname" name="Nickname" required placeholder="Codename eingeben" />
+            <p class="note">Bitte keinen echten Namen verwenden!</p>
+            <label for="haender">Händigkeit</label>
+            <select id="haender" name="haender" required>
+                <option value="links">Links</option>
+                <option value="rechts">Rechts</option>
+            </select>
+            <label for="gender">Geschlecht</label>
+            <select id="gender" name="Gender" required>
+                <option value="m">Männlich</option>
+                <option value="w">Weiblich</option>
+                <option value="d">Divers</option>
+            </select>
+            <button type="submit">Profil sichern</button>
+        </form>
+        <div id="message" aria-live="polite"></div>
+        <div id="debug" style="display:none;"></div>
+    </div>
 
-<h1>Spielerprofil erstellen</h1>
-<form id="playerForm">
-    <label for="nickname">Nickname:</label>
-    <input type="text" id="nickname" name="nickname" required>
+    <div id="confirmationPage" class="card" style="display:none">
+        <h1>Agentenprofil gespeichert</h1>
+        <p class="success">✔ Operation erfolgreich abgeschlossen.</p>
+        <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen</label>
+        <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
+        <div id="confMessage"></div>
+    </div>
 
-    <label for="haender">Händigkeit:</label>
-    <select id="haender" name="haender" required>
-        <option value="links">Links</option>
-        <option value="rechts">Rechts</option>
-        <option value="beide">Beide</option>
-    </select>
+    <div id="waitingPage" class="card" style="display:none">
+        <h1>Einsatzwarteschlange</h1>
+        <p>Bitte warten<span class="loader"></span></p>
+        <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
+        <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
+    </div>
 
-    <label for="gender">Geschlecht:</label>
-    <select id="gender" name="gender" required>
-        <option value="m">Männlich</option>
-        <option value="w">Weiblich</option>
-        <option value="d">Divers</option>
-    </select>
+    <div id="prePage" class="card" style="display:none">
+        <div class="arrow-animation"></div>
+        <h1>ALARM! ZUR AUSRÜSTUNG!</h1>
+        <p>Melden Sie sich zur Equipmentausgabe.</p>
+        <button id="acknowledgeBtn">Bestätigen</button>
+    </div>
 
-    <label for="is_ready">Bereit?</label>
-    <select id="is_ready" name="is_ready" required>
-        <option value="true">Ja</option>
-        <option value="false">Nein</option>
-    </select>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
 
-    <button type="submit">Speichern</button>
-</form>
+            const messageDiv = document.getElementById('message');
+            const debugDiv = document.getElementById('debug');
+            const appendDebug = (msg, timestamp = new Date().toLocaleTimeString()) => {
+                console.log(`[${timestamp}] ${msg}`);
+                debugDiv.style.display = '';
+                debugDiv.textContent += `[${timestamp}] ${msg}\n`;
+                debugDiv.scrollTop = debugDiv.scrollHeight;
+            };
+            const showMessage = (text, kind = '') => {
+                messageDiv.textContent = text;
+                messageDiv.className = kind;
+            };
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const supabaseUrl = 'https://ydqlidnpqxuwxhlpnfon.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlkcWxpZG5wcXh1d3hobHBuZm9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ1OTgyMTMsImV4cCI6MjA3MDE3NDIxM30.EJZyB68bgmSObnSbxKInlLgMZw9_UPPgvXl6w6d0U4c';
-    const TABLE_NAME = 'Players';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+            const pages = {
+                formPage: document.getElementById('formPage'),
+                confirmationPage: document.getElementById('confirmationPage'),
+                waitingPage: document.getElementById('waitingPage'),
+                prePage: document.getElementById('prePage')
+            };
+            const queuePos = document.getElementById('queuePos');
 
-    const form = document.getElementById('playerForm');
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+            // Supabase-Initialisierung mit detailliertem Debugging
+            let supabase;
+            try {
+                appendDebug('Initialisiere Supabase-Client...');
+                supabase = window.supabase.createClient(supabaseUrl, {
+                    apiKey: supabaseKey,
+                    headers: { 
+                        'apikey': supabaseKey, 
+                        'Authorization': `Bearer ${supabaseKey}` 
+                    },
+                    auth: { 
+                        persistSession: false,
+                        autoRefreshToken: false
+                    }
+                });
+                appendDebug(`Verwendeter API-Schlüssel: ${supabaseKey.substring(0, 10)}... (Länge: ${supabaseKey.length})`);
+                const { data, error } = await supabase
+                    .from(TABLE_NAME)
+                    .select('id')
+                    .limit(1)
+                    .single();
+                if (error) {
+                    appendDebug(`Verbindungsfehler: ${error.message} (Status: ${error.status || 'undefined'}, Details: ${JSON.stringify(error)})`);
+                    showMessage(`Verbindungsfehler zu Supabase: ${error.message}`, 'error');
+                } else {
+                    appendDebug('Verbindung erfolgreich. Daten: ' + JSON.stringify(data));
+                    showMessage('Verbindung zu Supabase hergestellt.', 'success');
+                }
+            } catch (err) {
+                appendDebug(`Initialisierungsfehler: ${err.message} (Stack: ${err.stack})`);
+                showMessage(`Fehler bei der Initialisierung von Supabase: ${err.message}`, 'error');
+                return;
+            }
 
-        const nickname = document.getElementById('nickname').value.trim();
-        const haender = document.getElementById('haender').value;
-        const gender = document.getElementById('gender').value;
-        const is_ready = document.getElementById('is_ready').value === 'true';
+            // Formular absenden
+            document.getElementById('playerForm').addEventListener('submit', async (ev) => {
+                ev.preventDefault();
+                debugDiv.textContent = '';
 
-        const { data, error } = await supabase
-            .from(TABLE_NAME)
-            .insert([{ nickname, haender, gender, is_ready }]);
+                const nicknameInput = document.getElementById('nickname');
+                const haenderInput = document.getElementById('haender');
+                const genderInput = document.getElementById('gender');
 
-        if (error) {
-            alert('Fehler beim Speichern: ' + error.message);
-            console.error(error);
-        } else {
-            alert('Spieler erfolgreich gespeichert!');
-            form.reset();
-        }
-    });
-});
-</script>
+                if (nicknameInput.value.trim().length < 2) {
+                    showMessage('Deckname muss mindestens 2 Zeichen lang sein.', 'error');
+                    return;
+                }
 
-</body>
-</html>
+                try {
+                    appendDebug('Prüfe auf doppelte Anmeldung...');
+                    const { data: existingPlayers, error: checkError } = await supabase
+                        .from(TABLE_NAME)
+                        .select('id')
+                        .eq('Nickname', nicknameInput.value.trim());
+
+                    if (checkError) {
+                        appendDebug(`Prüfungsfehler: ${checkError.message} (Status: ${checkError.status})`);
+                        showMessage('Fehler beim Prüfen der Anmeldung.', 'error');
+                        return;
+                    }
+
+                    if (existingPlayers && existingPlayers.length > 0) {
+                        showMessage('Dieser Deckname ist bereits registriert. Wähle einen anderen.', 'error');
+                        return;
+                    }
+
+                    const payload = {
+                        Nickname: nicknameInput.value.trim(),
+                        haender: haenderInput.value,
+                        Gender: genderInput.value,
+                        is_ready: false,
+                        created_at: new Date().toISOString(),
+                        status: 'logged in'
+                    };
+
+                    appendDebug('Speichere neues Profil...');
+                    const { data, error } = await supabase
+                        .from(TABLE_NAME)
+                        .insert([payload])
+                        .select('id, created_at, status')
+                        .single();
+
+                    if (error) {
+                        appendDebug(`Speicherfehler: ${error.message} (Details: ${JSON.stringify(error)})`);
+                        showMessage('Fehler beim Speichern: ' + error.message, 'error');
+                        return;
+                    }
+
+                    localStorage.setItem('player_id', data.id);
+                    appendDebug(`Spieler-ID gespeichert: ${data.id}, Status: ${data.status}`);
+                    pages.formPage.style.display = 'none';
+                    pages.confirmationPage.style.display = 'block';
+                } catch (err) {
+                    appendDebug(`Unerwarteter Fehler: ${err.message} (Stack: ${err.stack})`);
+                    showMessage('Unerwarteter Fehler beim Speichern.', 'error');
+                }
+            });
+
+            // Sicherheitsbestätigung
+            const securityConfirm = document.getElementById('securityConfirm');
+            const proceedBtn = document.getElementById('proceedBtn');
+            securityConfirm.addEventListener('change', async () => {
+                proceedBtn.disabled = !securityConfirm.checked;
+                if (securityConfirm.checked) {
+                    const playerId = localStorage.getItem('player_id');
+                    if (!playerId) {
+                        showMessage('Fehler: Keine Spieler-ID gefunden.', 'error');
+                        return;
+                    }
+
+                    try {
+                        appendDebug(`Aktualisiere Status
