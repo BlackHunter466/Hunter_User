@@ -10,6 +10,8 @@
             --accent: #00ff99;
             --accent-2: #33ffbb;
             --card-bg: rgba(10,10,26,0.95);
+            --header-height: 84px;
+            --footer-height: 64px;
         }
 
         /* Header */
@@ -18,7 +20,7 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 84px;
+            height: var(--header-height);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -38,20 +40,30 @@
             text-shadow: 0 2px 12px rgba(0,255,153,0.12);
         }
 
+        /* Body & main area: reserve space for header + footer so cards aren't covered */
         body {
             font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #0a0a1a, #1a1a2e);
             color: var(--accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
             margin: 0;
             overflow: hidden;
             position: relative;
-            flex-direction: column;
-            padding-top: 100px; /* Platz für Header */
+            min-height: 100vh;
             box-sizing: border-box;
+        }
+
+        /* main content area (all pages go here) */
+        main#main {
+            /* ensure header and footer don't overlap content */
+            min-height: calc(100vh - var(--header-height) - var(--footer-height));
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         /* Card */
@@ -108,9 +120,7 @@
         button:hover { transform: scale(1.02); }
 
         label { display: block; text-align: left; margin-top: 0.5rem; color: var(--accent-2); }
-
         .note { color: var(--accent-2); font-size: 1rem; margin-top: 0.5rem; text-align: left; opacity: 0.95; }
-
         .error { color: #ff6666; font-weight: bold; margin-top: 1rem; animation: pulse 0.5s ease-in-out; }
         .success { color: var(--accent); font-weight: bold; margin-top: 1rem; animation: fadeIn 0.5s ease-out; }
 
@@ -147,22 +157,22 @@
         #prePage {
             display: none;
             position: fixed;
-            top: 0;
+            /* respect header and footer so overlay isn't covered */
+            top: var(--header-height);
+            bottom: var(--footer-height);
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);
             color: #ffffff;
             justify-content: center;
             align-items: center;
-            z-index: 1000;
+            z-index: 2001;
             animation: fadeInScale 0.8s ease-out;
-            display: flex;
             padding: 2rem;
             box-sizing: border-box;
         }
         #prePage .card {
-            background: linear-gradient(145deg, rgba(10,10,26,0.95), rgba(26,26,46,0.95));
+            background: linear-gradient(145deg, rgba(10,10,26,0.97), rgba(26,26,46,0.97));
             border-color: var(--accent);
             box-shadow: 0 5px 25px rgba(0,255,153,0.15);
             padding: 2rem;
@@ -195,7 +205,7 @@
             opacity: 0.85;
         }
 
-        /* Animations kept for general UI, but arrow-specific animations removed from prePage */
+        /* Animations kept for general UI */
         @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -203,12 +213,33 @@
         .card[style*="display: none"] { animation: fadeOut 0.5s ease-out; }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-        footer { margin-top: auto; padding: 1rem; color: #33ffbb; font-size: 1rem; opacity: 0.8; text-align: center; width: 100%; background: linear-gradient(135deg, #0a0a1a, #1a1a2e); border-top: 1px solid var(--accent); user-select: none; pointer-events: none; font-family: 'Arial', sans-serif; box-sizing: border-box; position: fixed; bottom: 0; left: 0; right: 0; }
+        /* Fixed footer with height variable so main content won't be covered */
+        footer {
+            height: var(--footer-height);
+            padding: 1rem;
+            color: #33ffbb;
+            font-size: 1rem;
+            opacity: 0.8;
+            text-align: center;
+            width: 100%;
+            background: linear-gradient(135deg, #0a0a1a, #1a1a2e);
+            border-top: 1px solid var(--accent);
+            user-select: none;
+            pointer-events: none;
+            font-family: 'Arial', sans-serif;
+            box-sizing: border-box;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 2000;
+        }
+
         /* kleinere Bildschirme: etwas kompakter */
         @media (max-width: 520px) {
             .pre-big { font-size: 2.2rem; }
             .site-header h2 { font-size: 20px; }
-            body { padding-top: 76px; }
+            main#main { padding-top: 0.8rem; padding-bottom: 0.8rem; }
         }
     </style>
 </head>
@@ -218,49 +249,52 @@
         <h2>Hektagon</h2>
     </header>
 
-    <div id="formPage" class="card" role="main">
-        <h1>Agenten-Log in</h1>
-        <p class="subtitle">Agenten, Bereiten Sie sich auf Ihre Mission vor</p>
-        <form id="playerForm">
-            <label for="Nickname">Deckname</label>
-            <input id="Nickname" name="Nickname" required placeholder="Codename eingeben" />
-            <p class="note">Bitte keinen echten Namen verwenden!</p>
+    <!-- Main wrapper: ensures pages area is sized between header and footer -->
+    <main id="main" role="main">
+        <div id="formPage" class="card" role="document">
+            <h1>Agenten-Log in</h1>
+            <p class="subtitle">Agenten, Bereiten Sie sich auf Ihre Mission vor</p>
+            <form id="playerForm">
+                <label for="Nickname">Deckname</label>
+                <input id="Nickname" name="Nickname" required placeholder="Codename eingeben" />
+                <p class="note">Bitte keinen echten Namen verwenden!</p>
 
-            <label for="haender">Händigkeit</label>
-            <select id="haender" name="haender" required>
-                <option value="links">Links</option>
-                <option value="rechts">Rechts</option>
-            </select>
+                <label for="haender">Händigkeit</label>
+                <select id="haender" name="haender" required>
+                    <option value="links">Links</option>
+                    <option value="rechts">Rechts</option>
+                </select>
 
-            <label for="Gender">Geschlecht</label>
-            <select id="Gender" name="Gender" required>
-                <option value="m">Männlich</option>
-                <option value="w">Weiblich</option>
-                <option value="d">keine Angabe</option>
-            </select>
+                <label for="Gender">Geschlecht</label>
+                <select id="Gender" name="Gender" required>
+                    <option value="m">Männlich</option>
+                    <option value="w">Weiblich</option>
+                    <option value="d">keine Angabe</option>
+                </select>
 
-            <button type="submit">Profil sichern</button>
-        </form>
-        <div id="message" aria-live="polite"></div>
-        <div id="debug" style="display:none;"></div>
-    </div>
+                <button type="submit">Profil sichern</button>
+            </form>
+            <div id="message" aria-live="polite"></div>
+            <div id="debug" style="display:none;"></div>
+        </div>
 
-    <div id="confirmationPage" class="card" style="display:none">
-        <h1>Agentenprofil gespeichert</h1>
-        <p class="success">Bitte lesen Sie folgende Sicherheitsinstruktionen.</p>
-        <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen und akzeptiert</label>
-        <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
-        <div id="confMessage"></div>
-    </div>
+        <div id="confirmationPage" class="card" style="display:none" role="document">
+            <h1>Agentenprofil gespeichert</h1>
+            <p class="success">Bitte lesen Sie folgende Sicherheitsinstruktionen.</p>
+            <label><input type="checkbox" id="securityConfirm"> Sicherheitsrichtlinien gelesen und akzeptiert</label>
+            <button id="proceedBtn" disabled>Weiter zur Einsatzwarteschlange</button>
+            <div id="confMessage"></div>
+        </div>
 
-    <div id="waitingPage" class="card" style="display:none">
-        <h1>Einsatzwarteschlange</h1>
-        <p>Bitte warten Sie. Sie werden gleich aufgerufen. Bleiben Sie auf dieser Seite<span class="loader"></span></p>
-        <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
-        <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
-    </div>
+        <div id="waitingPage" class="card" style="display:none" role="document">
+            <h1>Einsatzwarteschlange</h1>
+            <p>Bitte warten Sie. Sie werden gleich aufgerufen. Bleiben Sie auf dieser Seite<span class="loader"></span></p>
+            <p>Aktuelle Position: <span id="queuePos">Wird ermittelt...</span></p>
+            <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
+        </div>
+    </main>
 
-    <!-- prePage: keine Pfeile, kein Button, stattdessen Texte -->
+    <!-- prePage: keine Pfeile, kein Button, stattdessen Texte; positioned so header/footer don't cover it -->
     <div id="prePage" style="display:none" aria-live="polite" role="dialog" aria-label="Einsatz Startmeldung">
         <div class="card" role="document">
             <h1>Es geht los!</h1>
