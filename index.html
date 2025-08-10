@@ -5,10 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Agenten—DB (stabil)</title>
     <style>
+        /* Grundlayout */
+        :root {
+            --accent: #00ff99;
+            --accent-2: #33ffbb;
+            --card-bg: rgba(10,10,26,0.95);
+        }
+
+        /* Header */
+        .site-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 84px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(90deg, rgba(5,5,10,0.85), rgba(20,20,35,0.65));
+            border-bottom: 1px solid rgba(0,255,153,0.08);
+            z-index: 2000;
+            pointer-events: none; /* nicht klickbar, rein dekorativ */
+        }
+        .site-header h2 {
+            margin: 0;
+            padding: 0 16px;
+            font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+            font-weight: 700;
+            font-size: 28px;
+            color: var(--accent);
+            letter-spacing: 1px;
+            text-shadow: 0 2px 12px rgba(0,255,153,0.12);
+        }
+
         body {
             font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #0a0a1a, #1a1a2e);
-            color: #00ff99;
+            color: var(--accent);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -17,10 +50,14 @@
             overflow: hidden;
             position: relative;
             flex-direction: column;
+            padding-top: 100px; /* Platz für Header */
+            box-sizing: border-box;
         }
+
+        /* Card */
         .card {
             background: linear-gradient(145deg, rgba(10, 10, 26, 0.9), rgba(26, 26, 46, 0.9));
-            border: 2px solid #00ff99;
+            border: 2px solid var(--accent);
             padding: 2.5rem;
             border-radius: 12px;
             max-width: 550px;
@@ -33,30 +70,33 @@
         h1 {
             font-size: 2rem;
             margin-bottom: 0.5rem;
-            text-shadow: 0 1px 2px rgba(0, 255, 153, 0.3);
+            text-shadow: 0 1px 2px rgba(0, 255, 153, 0.25);
         }
         .subtitle {
             font-size: 1.1rem;
-            color: #33ffbb;
+            color: var(--accent-2);
             margin-bottom: 1.5rem;
-            opacity: 0.9;
-            text-shadow: 0 0.5px 1px rgba(51, 255, 187, 0.2);
+            opacity: 0.95;
+            text-shadow: 0 0.5px 1px rgba(51, 255, 187, 0.12);
         }
+
+        /* Form Controls */
         input, select, button {
             width: 100%;
             padding: 0.8rem;
             margin-top: 0.4rem;
             border-radius: 8px;
-            border: 1px solid #00ff99;
-            background: rgba(17, 17, 17, 0.8);
-            color: #00ff99;
+            border: 1px solid var(--accent);
+            background: rgba(17, 17, 17, 0.85);
+            color: var(--accent);
             font-size: 1rem;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
+            box-sizing: border-box;
         }
         input:focus, select:focus {
             outline: none;
-            border-color: #33ffbb;
-            box-shadow: 0 0 5px rgba(51, 255, 187, 0.3);
+            border-color: var(--accent-2);
+            box-shadow: 0 0 6px rgba(51,255,187,0.18);
         }
         button {
             background: linear-gradient(90deg, #006633, #009966);
@@ -65,45 +105,16 @@
             font-weight: bold;
             color: #ffffff;
         }
-        button:hover {
-            background: linear-gradient(90deg, #008040, #00cc66);
-            transform: scale(1.03);
-        }
-        button:disabled {
-            background: linear-gradient(90deg, #003d1a, #005f33);
-            opacity: 0.6;
-            transform: scale(1);
-            cursor: not-allowed;
-            color: #cccccc;
-        }
-        label {
-            display: block;
-            text-align: left;
-            margin-top: 0.5rem;
-        }
-        .note {
-            color: #33ffbb;
-            font-size: 1rem;
-            margin-top: 0.5rem;
-            text-align: left;
-            opacity: 0.9;
-        }
-        .error {
-            color: #ff6666;
-            font-weight: bold;
-            margin-top: 1rem;
-            animation: pulse 0.5s ease-in-out;
-        }
-        .success {
-            color: #00ff99;
-            font-weight: bold;
-            margin-top: 1rem;
-            animation: fadeIn 0.5s ease-out;
-        }
-        #message {
-            margin-top: 1rem;
-            min-height: 1.2rem;
-        }
+        button:hover { transform: scale(1.02); }
+
+        label { display: block; text-align: left; margin-top: 0.5rem; color: var(--accent-2); }
+
+        .note { color: var(--accent-2); font-size: 1rem; margin-top: 0.5rem; text-align: left; opacity: 0.95; }
+
+        .error { color: #ff6666; font-weight: bold; margin-top: 1rem; animation: pulse 0.5s ease-in-out; }
+        .success { color: var(--accent); font-weight: bold; margin-top: 1rem; animation: fadeIn 0.5s ease-out; }
+
+        #message { margin-top: 1rem; min-height: 1.2rem; }
         #debug {
             margin-top: 1.5rem;
             text-align: left;
@@ -119,9 +130,10 @@
             transition: opacity 0.3s ease;
         }
         #debug:empty { display: none; }
+
         .loader {
             border: 4px solid rgba(34, 34, 34, 0.8);
-            border-top: 4px solid #00ff99;
+            border-top: 4px solid var(--accent);
             border-radius: 50%;
             width: 20px;
             height: 20px;
@@ -131,7 +143,7 @@
             vertical-align: middle;
         }
 
-        /* Pre-page overlay (keine funktionale Änderung) */
+        /* prePage card overrides (keine Pfeile, keine Buttons) */
         #prePage {
             display: none;
             position: fixed;
@@ -151,7 +163,7 @@
         }
         #prePage .card {
             background: linear-gradient(145deg, rgba(10,10,26,0.95), rgba(26,26,46,0.95));
-            border-color: #00ff99;
+            border-color: var(--accent);
             box-shadow: 0 5px 25px rgba(0,255,153,0.15);
             padding: 2rem;
             position: relative;
@@ -160,51 +172,30 @@
             width: 90%;
             text-align: center;
         }
-        #prePage h1 { font-size: 2rem; text-shadow: 0 0 5px #ffffff; margin-bottom: 1rem; color: #00ff99; }
+        #prePage h1 { font-size: 2rem; text-shadow: 0 0 5px #ffffff; margin-bottom: 1rem; color: var(--accent); }
         #prePage p { font-size: 1rem; margin: 0.5rem 0; text-shadow: 0 0 2px #ffffff; color: #cfeee0; }
 
-        /* Kleine Pfeil-Animation (bleibt erhalten, falls jemand's CSS erwartet) */
-        .arrow-animation {
-            position: absolute;
-            bottom: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-bottom: 30px solid transparent;
-            border-top: 30px solid #0000ff;
-            animation: arrowReveal 1.5s ease-out forwards;
-            z-index: 1;
-            opacity: 0.9;
+        /* Die gewünschten Texte auf prePage in verschiedenen Größen */
+        .pre-big {
+            font-size: 3rem;
+            color: var(--accent);
+            margin: 0.6rem 0;
+            text-shadow: 0 6px 18px rgba(0,255,153,0.08);
         }
-        @keyframes arrowReveal { 0% { height: 0; opacity: 0; } 100% { height: 60px; opacity: 1; transform: translateX(-50%) translateY(-60px); } }
-
-        /* Großer blinkender Pfeil für prePage */
-        .big-arrow {
-            font-size: 6.5rem;               /* deutlich größer als vorher */
-            line-height: 1;
-            margin: 1.25rem 0;
-            color: #00ff99;
-            text-shadow: 0 0 8px rgba(0,255,153,0.6), 0 0 20px rgba(0,255,153,0.15);
-            display: inline-block;
-            animation: blinkArrow 1s steps(2, jump-start) infinite, floatArrow 2.8s ease-in-out infinite;
-            user-select: none;
+        .pre-mid {
+            font-size: 1.15rem;
+            color: #d6f6e8;
+            margin-top: 0.6rem;
+            opacity: 0.95;
+        }
+        .pre-small {
+            font-size: 0.9rem;
+            color: #bfeee0;
+            margin-top: 0.35rem;
+            opacity: 0.85;
         }
 
-        @keyframes blinkArrow {
-            0% { opacity: 1; transform: translateY(0); }
-            50% { opacity: 0.15; transform: translateY(6px); }
-            100% { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes floatArrow {
-            0% { transform: translateY(0); }
-            50% { transform: translateY(-6px); }
-            100% { transform: translateY(0); }
-        }
-
+        /* Animations kept for general UI, but arrow-specific animations removed from prePage */
         @keyframes fadeInScale { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -212,11 +203,22 @@
         .card[style*="display: none"] { animation: fadeOut 0.5s ease-out; }
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-        footer { margin-top: auto; padding: 1rem; color: #33ffbb; font-size: 1rem; opacity: 0.8; text-align: center; width: 100%; background: linear-gradient(135deg, #0a0a1a, #1a1a2e); border-top: 1px solid #00ff99; user-select: none; pointer-events: none; font-family: 'Arial', sans-serif; }
+        footer { margin-top: auto; padding: 1rem; color: #33ffbb; font-size: 1rem; opacity: 0.8; text-align: center; width: 100%; background: linear-gradient(135deg, #0a0a1a, #1a1a2e); border-top: 1px solid var(--accent); user-select: none; pointer-events: none; font-family: 'Arial', sans-serif; box-sizing: border-box; position: fixed; bottom: 0; left: 0; right: 0; }
+        /* kleinere Bildschirme: etwas kompakter */
+        @media (max-width: 520px) {
+            .pre-big { font-size: 2.2rem; }
+            .site-header h2 { font-size: 20px; }
+            body { padding-top: 76px; }
+        }
     </style>
 </head>
 <body>
-    <div id="formPage" class="card">
+    <!-- Globaler Header (auf allen Seiten sichtbar) -->
+    <header class="site-header" aria-hidden="true">
+        <h2>Hektagon</h2>
+    </header>
+
+    <div id="formPage" class="card" role="main">
         <h1>Agenten-Log in</h1>
         <p class="subtitle">Agenten, Bereiten Sie sich auf Ihre Mission vor</p>
         <form id="playerForm">
@@ -258,17 +260,13 @@
         <div id="waitingDebug" style="margin-top:8px;color:#bbb;font-size:.9rem"></div>
     </div>
 
-    <div id="prePage" style="display:none">
-        <div class="card">
-            <!-- großer blinkender Pfeil in der gleichen Card wie die anderen Seiten -->
-            <div class="arrow-animation" aria-hidden="true"></div>
+    <!-- prePage: keine Pfeile, kein Button, stattdessen Texte -->
+    <div id="prePage" style="display:none" aria-live="polite" role="dialog" aria-label="Einsatz Startmeldung">
+        <div class="card" role="document">
             <h1>Es geht los!</h1>
-            <p>Melden Sie sich bei der Equipmentausgabe.</p>
-
-            <!-- Großer, blinkender Pfeil -->
-            <div class="big-arrow" aria-hidden="true">⬇</div>
-
-            <button id="acknowledgeBtn">Bestätigen</button>
+            <p class="pre-big">Viel Glück</p>
+            <p class="pre-mid">Passen Sie auf sich auf.</p>
+            <p class="pre-small">Wir hoffen, Sie kommen zurück.</p>
         </div>
     </div>
 
@@ -561,31 +559,6 @@
                     showMessage('Unbekannter Fehler beim Status-Update.', 'error');
                     proceedBtn.disabled = false;
                     proceedBtn.textContent = 'Weiter zur Einsatzwarteschlange';
-                }
-            });
-
-            // Pre-Page "Bestätigen" Button (falls benötigt)
-            document.getElementById('acknowledgeBtn').addEventListener('click', async () => {
-                const playerId = localStorage.getItem('player_id');
-                if (!playerId) {
-                    showMessage('Keine gültige Anmeldung gefunden.', 'error');
-                    showPage('formPage');
-                    return;
-                }
-                try {
-                    const { error } = await supabase
-                        .from(TABLE_NAME)
-                        .update({ status: 'pre' })
-                        .eq('id', playerId);
-                    if (error) {
-                        appendDebug(`Fehler beim Setzen des Pre-Status: ${error.message}`);
-                        showMessage('Fehler beim Aktualisieren.', 'error');
-                        return;
-                    }
-                    alert('Ausrüstung bestätigt! Bereit für die Mission.');
-                } catch (err) {
-                    appendDebug(`Fehler bei Pre-Status-Update: ${err.message}`);
-                    showMessage('Unbekannter Fehler.', 'error');
                 }
             });
 
