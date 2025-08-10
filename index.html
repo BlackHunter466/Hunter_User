@@ -16,7 +16,6 @@
             margin: 0;
             overflow: hidden;
             position: relative;
-            flex-direction: column;
         }
         .card {
             background: linear-gradient(145deg, rgba(10, 10, 26, 0.9), rgba(26, 26, 46, 0.9));
@@ -28,7 +27,6 @@
             box-shadow: 0 4px 10px rgba(0, 255, 153, 0.2);
             text-align: center;
             animation: fadeInScale 0.8s ease-out;
-            position: relative;
         }
         h1 {
             font-size: 2rem;
@@ -210,14 +208,18 @@
             from { opacity: 1; }
             to { opacity: 0; }
         }
-
-        /* Neuer Footer-Hinweis, der unter allen Seiten angezeigt wird */
-        #footerNote {
-            margin-top: 20px;
-            font-size: 0.9rem;
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(10, 10, 26, 0.9);
             color: #33ffbb;
+            font-size: 1rem;
             text-align: center;
+            border-top: 1px solid #00ff99;
             user-select: none;
+            z-index: 9999;
         }
     </style>
 </head>
@@ -236,8 +238,8 @@
                 <option value="rechts">Rechts</option>
             </select>
 
-            <label for="gender">Geschlecht</label>
-            <select id="gender" name="Gender" required>
+            <label for="Gender">Geschlecht</label>
+            <select id="Gender" name="Gender" required>
                 <option value="m">Männlich</option>
                 <option value="w">Weiblich</option>
                 <option value="d">keine Angabe</option>
@@ -271,8 +273,9 @@
         <button id="acknowledgeBtn">Bestätigen</button>
     </div>
 
-    <!-- Neuer Hinweis unten auf allen Seiten -->
-    <div id="footerNote">Bei Problemen wenden Sie sich an die Equipmentausgabe.</div>
+    <footer>
+        Bei Problemen wenden Sie sich an die Equipmentausgabe.
+    </footer>
 
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -302,10 +305,9 @@
             };
             const queuePos = document.getElementById('queuePos');
 
-            if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-                showMessage('Fatal: Supabase SDK nicht gefunden oder inkompatibel.', 'error');
-                appendDebug('SDK missing: window.supabase.createClient nicht verfügbar.');
-                return;
+            function showPage(pageName) {
+                Object.values(pages).forEach(p => p.style.display = 'none');
+                pages[pageName].style.display = 'block';
             }
 
             let supabase;
@@ -318,38 +320,46 @@
                 return;
             }
 
-            async function checkTable() {
-                appendDebug(`Prüfe Tabelle "${TABLE_NAME}"...`);
+            // Status beim Laden prüfen und Seite entsprechend setzen
+            async function checkPlayerStatusOnLoad() {
+                const playerId = localStorage.getItem('player_id');
+                if (!playerId) {
+                    showPage('formPage');
+                    return;
+                }
                 try {
-                    const { data, error } = await supabase.from(TABLE_NAME).select('id').limit(1);
+                    const { data, error } = await supabase
+                        .from(TABLE_NAME)
+                        .select('status')
+                        .eq('id', playerId)
+                        .single();
                     if (error) {
-                        appendDebug(`Fehler bei Tabelle "${TABLE_NAME}": ${error.message} (Status: ${error.status}, Details: ${JSON.stringify(error)})`);
-                        showMessage(`Tabelle "${TABLE_NAME}" nicht zugänglich: ${error.message}`, 'error');
-                        return false;
+                        appendDebug(`Fehler beim Abrufen des Status: ${error.message}`);
+                        showPage('formPage');
+                        return;
                     }
-                    appendDebug(`Tabelle "${TABLE_NAME}" gefunden und zugänglich. Daten: ${JSON.stringify(data)}`);
-                    return true;
+                    appendDebug(`Aktueller Status beim Laden: ${data.status}`);
+                    switch (data.status) {
+                        case 'logged in':
+                            showPage('confirmationPage');
+                            break;
+                        case 'waiting':
+                            showPage('waitingPage');
+                            await updateQueue(playerId);
+                            setInterval(() => updateQueue(playerId), 5000);
+                            break;
+                        case 'pre':
+                            showPage('prePage');
+                            break;
+                        default:
+                            showPage('formPage');
+                    }
                 } catch (err) {
-                    appendDebug(`Unerwarteter Fehler bei Tabellenprüfung: ${err.message}`);
-                    showMessage('Unerwarteter Fehler bei der Tabellenprüfung.', 'error');
-                    return false;
+                    appendDebug(`Fehler bei Statusprüfung: ${err.message}`);
+                    showPage('formPage');
                 }
             }
 
-            const tableExists = await checkTable();
-            if (!tableExists) {
-                showMessage('Tabelle "Players" nicht gefunden oder nicht zugänglich. Prüfe den Tabellennamen und Supabase-Verbindung.', 'error');
-                return;
-            }
-
-            // Neue Funktion für Seitenanzeige
-            function showPage(pageName) {
-                for (const p in pages) {
-                    pages[p].style.display = (p === pageName) ? 'block' : 'none';
-                }
-            }
-
-            // Warteschlange-Update mit korrekter Position der Spieler vor dir
             async function updateQueue(playerId) {
                 try {
                     appendDebug('Starte Warteschlangen-Update...');
@@ -360,159 +370,130 @@
                         .order('created_at', { ascending: true });
 
                     if (error) {
-                        appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message} (Status: ${error.status})`);
+                        appendDebug(`Fehler beim Abrufen der Warteschlange: ${error.message}`);
                         queuePos.textContent = 'Fehler beim Laden';
                         return;
                     }
                     appendDebug(`Abruf erfolgreich, ${allWaiting.length} Einträge gefunden.`);
 
                     if (!allWaiting || allWaiting.length === 0) {
-                        appendDebug('Keine wartenden Spieler gefunden.');
-                        queuePos.textContent = '0';
+                        queuePos.textContent = '1';
                         return;
                     }
 
-                    const myEntry = allWaiting.find(item => String(item.id) === String(playerId));
-                    if (!myEntry) {
-                        appendDebug('Spieler nicht in Warteschlange gefunden.');
+                    // Anzahl Spieler vor dir = Index von deinem Eintrag
+                    const myIndex = allWaiting.findIndex(item => String(item.id) === String(playerId));
+                    if (myIndex === -1) {
                         queuePos.textContent = 'Nicht in Warteschlange';
                         return;
                     }
-
-                    // Anzahl Spieler vor dir basierend auf created_at Timestamp
-                    const playersBefore = allWaiting.filter(p => new Date(p.created_at) < new Date(myEntry.created_at));
-                    queuePos.textContent = playersBefore.length;
-                    document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Vor dir: ${playersBefore.length}`;
-                    appendDebug(`Position berechnet: ${playersBefore.length}`);
-
+                    const position = myIndex + 1;
+                    const playersAhead = myIndex; // wie viele vor dir sind
+                    queuePos.textContent = `${position} (Vor dir: ${playersAhead})`;
+                    document.getElementById('waitingDebug').textContent = `Wartende: ${allWaiting.length}, Eigene Position: ${position}`;
+                    appendDebug(`Position berechnet: ${position}, Vor dir: ${playersAhead}`);
                 } catch (err) {
                     appendDebug(`Queue-Update-Fehler: ${err.message}`);
                     queuePos.textContent = 'Fehler aufgetreten';
                 }
             }
 
-            // Beim Laden prüfen, ob Spieler schon angemeldet und welchen Status er hat, dann weiterleiten
-            async function checkPlayerStatusOnLoad() {
-                const playerId = localStorage.getItem('player_id');
-                if (!playerId) {
-                    appendDebug('Kein playerId gefunden in localStorage.');
-                    showPage('formPage');
-                    return;
-                }
-
-                try {
-                    const { data, error } = await supabase
-                        .from(TABLE_NAME)
-                        .select('status')
-                        .eq('id', playerId)
-                        .single();
-
-                    if (error) {
-                        appendDebug(`Fehler beim Abrufen des Status: ${error.message}`);
-                        showPage('formPage');
-                        return;
-                    }
-                    appendDebug(`Status beim Laden: ${data.status}`);
-
-                    if (data.status === 'waiting') {
-                        showPage('waitingPage');
-                        await updateQueue(playerId);
-                        setInterval(() => updateQueue(playerId), 5000);
-                    } else if (data.status === 'pre') {
-                        showPage('prePage');
-                    } else if (data.status === 'logged in') {
-                        showPage('confirmationPage'); // Sicherheitsinfo-Seite ist confirmationPage nach deinem Code
-                    } else {
-                        showPage('formPage');
-                    }
-                } catch (err) {
-                    appendDebug(`Status-Check-Fehler: ${err.message}`);
-                    showPage('formPage');
-                }
-            }
-
-            await checkPlayerStatusOnLoad();
-
-            // Form submit Handler
+            // Formular absenden mit Profil speichern und Status auf 'waiting' setzen
             document.getElementById('playerForm').addEventListener('submit', async e => {
                 e.preventDefault();
+                showMessage('');
+                debugDiv.textContent = '';
+
                 const nickname = document.getElementById('nickname').value.trim();
                 const haender = document.getElementById('haender').value;
-                const gender = document.getElementById('gender').value;
+                const Gender = document.getElementById('Gender').value;
 
                 if (!nickname) {
                     showMessage('Bitte einen Decknamen eingeben.', 'error');
                     return;
                 }
-                showMessage('Profil wird gespeichert...', '');
 
                 try {
-                    const { data, error } = await supabase.from(TABLE_NAME).insert({
-                        name: nickname,
-                        haender: haender,
-                        gender: gender,
-                        status: 'waiting',
-                        is_ready: true,
-                        created_at: new Date().toISOString()
-                    }).select().single();
+                    let playerId = localStorage.getItem('player_id');
+                    if (playerId) {
+                        // Update
+                        const { error } = await supabase
+                            .from(TABLE_NAME)
+                            .update({ nickname, haender, Gender, status: 'waiting', is_ready: true })
+                            .eq('id', playerId);
 
-                    if (error) {
-                        showMessage('Fehler beim Speichern: ' + error.message, 'error');
-                        appendDebug('Insert-Fehler: ' + error.message);
-                        return;
+                        if (error) {
+                            showMessage('Fehler beim Aktualisieren: ' + error.message, 'error');
+                            return;
+                        }
+                    } else {
+                        // Insert
+                        const { data, error } = await supabase
+                            .from(TABLE_NAME)
+                            .insert([{ nickname, haender, Gender, status: 'waiting', is_ready: true }])
+                            .select()
+                            .single();
+
+                        if (error) {
+                            showMessage('Fehler beim Speichern: ' + error.message, 'error');
+                            return;
+                        }
+                        playerId = data.id;
+                        localStorage.setItem('player_id', playerId);
                     }
 
-                    localStorage.setItem('player_id', data.id);
-                    showMessage('Profil gespeichert.', 'success');
+                    showMessage('Profil erfolgreich gespeichert.', 'success');
+                    appendDebug(`Spieler ID: ${playerId}`);
+
+                    // Direkt zur Warteschlange springen
                     showPage('waitingPage');
-                    await updateQueue(data.id);
-                    setInterval(() => updateQueue(data.id), 5000);
+                    await updateQueue(playerId);
+                    setInterval(() => updateQueue(playerId), 5000);
+
                 } catch (err) {
-                    showMessage('Unerwarteter Fehler beim Speichern.', 'error');
-                    appendDebug('Insert-Fehler (Exception): ' + err.message);
+                    showMessage('Unbekannter Fehler: ' + err.message, 'error');
                 }
             });
 
-            // Sicherheitsbestätigung Checkbox
-            const securityConfirm = document.getElementById('securityConfirm');
+            // Sicherheitsinfo Checkbox und Button
+            const securityConfirmCheckbox = document.getElementById('securityConfirm');
             const proceedBtn = document.getElementById('proceedBtn');
 
-            securityConfirm.addEventListener('change', () => {
-                proceedBtn.disabled = !securityConfirm.checked;
+            securityConfirmCheckbox.addEventListener('change', () => {
+                proceedBtn.disabled = !securityConfirmCheckbox.checked;
             });
 
             proceedBtn.addEventListener('click', async () => {
                 const playerId = localStorage.getItem('player_id');
                 if (!playerId) {
-                    showMessage('Kein Spieler gefunden.', 'error');
+                    showMessage('Kein Spielerprofil gefunden.', 'error');
+                    showPage('formPage');
                     return;
                 }
                 try {
-                    const { error } = await supabase.from(TABLE_NAME).update({
-                        status: 'waiting'
-                    }).eq('id', playerId);
+                    const { error } = await supabase
+                        .from(TABLE_NAME)
+                        .update({ status: 'logged in' })
+                        .eq('id', playerId);
 
                     if (error) {
-                        showMessage('Fehler beim Aktualisieren: ' + error.message, 'error');
-                        appendDebug('Update-Fehler: ' + error.message);
+                        showMessage('Fehler beim Setzen des Status: ' + error.message, 'error');
                         return;
                     }
-                    showPage('waitingPage');
-                    await updateQueue(playerId);
-                    setInterval(() => updateQueue(playerId), 5000);
+                    showMessage('Status erfolgreich gesetzt, leite weiter...', 'success');
+                    showPage('prePage');
                 } catch (err) {
-                    showMessage('Unerwarteter Fehler beim Aktualisieren.', 'error');
-                    appendDebug('Update-Fehler (Exception): ' + err.message);
+                    showMessage('Unbekannter Fehler: ' + err.message, 'error');
                 }
             });
 
-            // "Bestätigen" Button auf prePage
+            // Button auf PrePage zum Bestätigen (weiterer Schritt)
             document.getElementById('acknowledgeBtn').addEventListener('click', () => {
-                // Hier kannst du definieren, was beim Klick passieren soll.  
-                // Beispiel: Weiterleitung zu einem anderen Ort oder Statuswechsel
-                alert('Equipmentausgabe wurde bestätigt. Viel Erfolg!');
+                alert('Melden Sie sich bitte an der Equipmentausgabe.');
+                // Optionale weitere Aktionen hier
             });
 
+            await checkPlayerStatusOnLoad();
         });
     </script>
 </body>
