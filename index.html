@@ -464,6 +464,26 @@
                         return;
                     }
                     appendDebug(`Status beim Laden: ${data.status}`);
+
+                    if (data.status === 'pre') {
+                        // Wenn beim Laden bereits 'pre', entferne den Spieler aus der Warteschlange (is_ready = false)
+                        try {
+                            const { error: updErr } = await supabase
+                                .from(TABLE_NAME)
+                                .update({ is_ready: false })
+                                .eq('id', playerId);
+                            if (updErr) {
+                                appendDebug(`Fehler beim Entfernen aus Warteschlange (onLoad): ${updErr.message}`);
+                            } else {
+                                appendDebug('Spieler beim Laden aus Warteschlange entfernt (is_ready=false).');
+                            }
+                        } catch (err) {
+                            appendDebug(`Update-Catch (onLoad): ${err.message}`);
+                        }
+                        showPage('prePage');
+                        return;
+                    }
+
                     switch (data.status) {
                         case 'logged in':
                             showPage('confirmationPage');
@@ -471,9 +491,6 @@
                         case 'waiting':
                             showPage('waitingPage');
                             startQueuePolling(playerId);
-                            break;
-                        case 'pre':
-                            showPage('prePage');
                             break;
                         default:
                             showPage('formPage');
@@ -621,8 +638,29 @@
 
                     appendDebug(`Aktueller Status: ${data.status}`);
                     if (data.status === 'pre') {
+                        // Wenn Admin den Status auf pre setzt, entferne Spieler aus Warteschlange (is_ready=false),
+                        // zeige prePage und stoppe Queue-Polling lokal.
+                        try {
+                            const { error: updErr } = await supabase
+                                .from(TABLE_NAME)
+                                .update({ is_ready: false })
+                                .eq('id', playerId);
+
+                            if (updErr) {
+                                appendDebug(`Fehler beim is_ready=false setzen nach pre: ${updErr.message}`);
+                            } else {
+                                appendDebug('Spieler in DB aus Warteschlange entfernt (is_ready=false) wegen pre.');
+                            }
+                        } catch (err) {
+                            appendDebug(`Update-Catch (pre): ${err.message}`);
+                        }
+
+                        // zeige pre page und stoppe lokales Polling
                         showPage('prePage');
                         if (queuePollingInterval) { clearInterval(queuePollingInterval); queuePollingInterval = null; appendDebug('Polling gestoppt wegen pre'); }
+
+                        // optional: trigger ein schnelles globales Queue-Update lokal (andere Clients holen es beim nächsten Intervall)
+                        // kein weiteres Handeln nötig — andere Clients poll'n weiter und sehen die geänderte Warteschlange.
                     } else if (data.status === 'waiting') {
                         if (pages.waitingPage.style.display !== 'block') {
                             showPage('waitingPage');
